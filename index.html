@@ -16,12 +16,21 @@
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
   @keyframes toastIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
   @keyframes toastOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(100%); } }
+  @keyframes dotBounce {
+    0%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-6px); }
+  }
   .msg-enter { animation: slideIn 0.3s ease-out; }
   .sidebar { transition: transform 0.3s ease-in-out; }
   .sidebar.closed { transform: translateX(-100%); }
   @media (min-width: 768px) { .sidebar.closed { transform: translateX(0); } }
   .toast-enter { animation: toastIn 0.4s ease-out; }
   .toast-exit { animation: toastOut 0.3s ease-in forwards; }
+  .dot-1 { animation: dotBounce 1.4s ease-in-out infinite; }
+  .dot-2 { animation: dotBounce 1.4s ease-in-out 0.2s infinite; }
+  .dot-3 { animation: dotBounce 1.4s ease-in-out 0.4s infinite; }
+  .key-input::placeholder { color: #9ca3af; }
+  .key-input:-webkit-autofill { -webkit-box-shadow: 0 0 0 30px #f3f4f6 inset !important; -webkit-text-fill-color: #111827 !important; }
 </style>
 </head>
 <body class="h-screen flex overflow-hidden">
@@ -29,28 +38,78 @@
 <!-- TOAST CONTAINER -->
 <div id="toastContainer" class="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none"></div>
 
+<!-- API KEY SETUP MODAL -->
+<div id="apiKeyModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] hidden items-center justify-center">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8 m-4 relative">
+    <div class="flex items-center gap-3 mb-2">
+      <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+      </div>
+      <div>
+        <h2 class="text-xl font-bold text-gray-900">Connect Your AI</h2>
+        <p class="text-sm text-gray-500">Enter a Google Gemini API key to get started</p>
+      </div>
+    </div>
+
+    <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+      <div class="flex gap-2">
+        <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <div class="text-sm text-amber-800">
+          <p class="font-semibold mb-1">How to get your free API key:</p>
+          <ol class="list-decimal list-inside space-y-0.5 text-amber-700">
+            <li>Go to <a href="https://aistudio.google.com/apikey" target="_blank" class="underline font-medium hover:text-amber-900">aistudio.google.com/apikey</a></li>
+            <li>Sign in with your Google account</li>
+            <li>Click "Create API Key" and copy it</li>
+            <li>Paste it below — it starts with <code class="bg-amber-100 px-1 rounded text-xs font-mono">AIza...</code></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-5">
+      <label class="block text-sm font-medium text-gray-700 mb-1.5">Gemini API Key</label>
+      <div class="relative">
+        <input type="password" id="apiKeyInput" placeholder="AIza..." class="key-input w-full p-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-sm font-mono bg-gray-50" autocomplete="off">
+        <button type="button" onclick="toggleKeyVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+          <svg id="eyeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+        </button>
+      </div>
+      <p id="keyError" class="text-red-500 text-xs mt-1.5 hidden"></p>
+    </div>
+
+    <button onclick="saveAndTestKey()" id="saveKeyBtn" class="mt-5 w-full bg-black text-white p-3 rounded-xl font-medium hover:bg-gray-800 transition-colors flex items-center justify-center gap-2">
+      <span id="saveKeyBtnText">Connect & Start Chatting</span>
+      <svg id="saveKeySpinner" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+    </button>
+
+    <button onclick="skipKeySetup()" class="mt-2 w-full text-center text-sm text-gray-400 hover:text-gray-600 py-2 transition-colors">
+      Skip — use without AI
+    </button>
+  </div>
+</div>
+
 <!-- LOGIN MODAL -->
-<div id="loginModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center">
-  <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-8 m-4 relative">
-    <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+<div id="loginModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden items-center justify-center">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 m-4 relative">
+    <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
     </button>
     <h2 class="text-2xl font-bold mb-6 text-center">Welcome</h2>
     <div class="flex mb-6 border-b">
-      <button id="tabLogin" onclick="showTab('login')" class="flex-1 pb-2 border-b-2 border-black font-medium">Login</button>
-      <button id="tabSignup" onclick="showTab('signup')" class="flex-1 pb-2 border-b-2 border-transparent text-gray-500">Sign Up</button>
+      <button id="tabLogin" onclick="showTab('login')" class="flex-1 pb-2 border-b-2 border-black font-medium transition-colors">Login</button>
+      <button id="tabSignup" onclick="showTab('signup')" class="flex-1 pb-2 border-b-2 border-transparent text-gray-500 transition-colors">Sign Up</button>
     </div>
     <form id="loginForm" onsubmit="handleLogin(event)">
-      <input type="email" id="loginEmail" placeholder="Email" class="w-full p-3 mb-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black" required>
-      <input type="password" id="loginPass" placeholder="Password" class="w-full p-3 mb-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black" required>
-      <button type="submit" class="w-full bg-black text-white p-3 rounded-lg font-medium hover:bg-gray-800">Sign In</button>
+      <input type="email" id="loginEmail" placeholder="Email" class="w-full p-3 mb-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-black" required>
+      <input type="password" id="loginPass" placeholder="Password" class="w-full p-3 mb-4 border rounded-xl focus:outline-none focus:ring-2 focus:ring-black" required>
+      <button type="submit" class="w-full bg-black text-white p-3 rounded-xl font-medium hover:bg-gray-800 transition-colors">Sign In</button>
       <p id="loginError" class="text-red-500 text-sm mt-2 text-center hidden"></p>
     </form>
     <form id="signupForm" class="hidden" onsubmit="handleSignup(event)">
-      <input type="text" id="signName" placeholder="Full Name" class="w-full p-3 mb-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black" required>
-      <input type="email" id="signEmail" placeholder="Email" class="w-full p-3 mb-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black" required>
-      <input type="password" id="signPass" placeholder="Password" class="w-full p-3 mb-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black" required>
-      <button type="submit" class="w-full bg-black text-white p-3 rounded-lg font-medium hover:bg-gray-800">Create Account</button>
+      <input type="text" id="signName" placeholder="Full Name" class="w-full p-3 mb-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-black" required>
+      <input type="email" id="signEmail" placeholder="Email" class="w-full p-3 mb-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-black" required>
+      <input type="password" id="signPass" placeholder="Password (min 6 chars)" class="w-full p-3 mb-4 border rounded-xl focus:outline-none focus:ring-2 focus:ring-black" required minlength="6">
+      <button type="submit" class="w-full bg-black text-white p-3 rounded-xl font-medium hover:bg-gray-800 transition-colors">Create Account</button>
       <p id="signError" class="text-red-500 text-sm mt-2 text-center hidden"></p>
     </form>
   </div>
@@ -61,45 +120,70 @@
   <!-- Sidebar -->
   <aside id="sidebar" class="sidebar closed fixed inset-y-0 left-0 z-30 w-64 bg-white border-r flex flex-col md:relative">
     <div class="p-4 border-b flex justify-between items-center">
-      <div class="flex items-center">
+      <div class="flex items-center gap-2">
         <svg class="w-6 h-6" viewBox="-245 355 85 85" fill="#3B82F6" xmlns="http://www.w3.org/2000/svg">
           <path d="M-167.5,390.5c-1.1,0-2-0.9-2-2c0-1.1,0.9-2,2-2c1.1,0,2,0.9,2,2C-165.5,389.6-166.4,390.5-167.5,390.5z M-177.5,428.5c-2.2,0-4-1.8-4-4s1.8-4,4-4c2.2,0,4,1.8,4,4S-175.3,428.5-177.5,428.5z M-177.5,410.5c-2.2,0-4-1.8-4-4s1.8-4,4-4c2.2,0,4,1.8,4,4S-175.3,410.5-177.5,410.5z M-177.5,392.5c-2.2,0-4-1.8-4-4c0-2.2,1.8-4,4-4c2.2,0,4,1.8,4,4C-173.5,390.7-175.3,392.5-177.5,392.5z M-177.5,374.5c-2.2,0-4-1.8-4-4c0-2.2,1.8-4,4-4c2.2,0,4,1.8,4,4C-173.5,372.7-175.3,374.5-177.5,374.5z M-194.5,414.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7c3.9,0,7,3.1,7,7C-187.5,411.4-190.6,414.5-194.5,414.5z M-194.5,394.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7c3.9,0,7,3.1,7,7C-187.5,391.4-190.6,394.5-194.5,394.5z M-195.5,374.5c-2.2,0-4-1.8-4-4c0-2.2,1.8-4,4-4c2.2,0,4,1.8,4,4C-191.5,372.7-193.3,374.5-195.5,374.5z M-195.5,362.5c-1.1,0-2-0.9-2-2c0-1.1,0.9-2,2-2c1.1,0,2,0.9,2,2C-193.5,361.6-194.4,362.5-195.5,362.5z M-214.5,414.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7s7,3.1,7,7C-207.5,411.4-210.6,414.5-214.5,414.5z M-214.5,394.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7s7,3.1,7,7C-207.5,391.4-210.6,394.5-214.5,394.5z M-213.5,374.5c-2.2,0-4-1.8-4-4c0-2.2,1.8-4,4-4c2.2,0,4,1.8,4,4C-209.5,372.7-211.3,374.5-213.5,374.5z M-213.5,362.5c-1.1,0-2-0.9-2-2c0-1.1,0.9-2,2-2c1.1,0,2,0.9,2,2C-211.5,361.6-212.4,362.5-213.5,362.5z M-231.5,374.5c-2.2,0-4-1.8-4-4c0-2.2,1.8-4,4-4c2.2,0,4,1.8,4,4C-227.5,372.7-229.3,374.5-231.5,374.5z M-231.5,384.5c2.2,0,4,1.8,4,4c0,2.2-1.8,4-4,4c-2.2,0-4-1.8-4-4C-235.5,386.3-233.7,384.5-231.5,384.5z M-241.5,408.5c-1.1,0-2-0.9-2-2c0-1.1,0.9-2,2-2c1.1,0,2,0.9,2,2C-239.5,407.6-240.4,408.5-241.5,408.5z M-241.5,390.5c-1.1,0-2-0.9-2-2c0-1.1,0.9-2,2-2c1.1,0,2,0.9,2,2C-239.5,389.6-240.4,390.5-241.5,390.5z M-231.5,402.5c2.2,0,4,1.8,4,4s-1.8,4-4,4c-2.2,0-4-1.8-4-4S-233.7,402.5-231.5,402.5z M-231.5,420.5c2.2,0,4,1.8,4,4s-1.8,4-4,4c-2.2,0-4-1.8-4-4S-233.7,420.5-231.5,420.5z M-213.5,420.5c2.2,0,4,1.8,4,4c0,2.2-1.8,4-4,4c-2.2,0-4-1.8-4-4C-217.5,422.3-215.7,420.5-213.5,420.5z M-213.5,432.5c1.1,0,2,0.9,2,2c0,1.1-0.9,2-2,2c-1.1,0-2-0.9-2-2C-215.5,433.4-214.6,432.5-213.5,432.5z M-195.5,420.5c2.2,0,4,1.8,4,4c0,2.2-1.8,4-4-4c-2.2,0-4-1.8-4-4C-199.5,422.3-197.7,420.5-195.5,420.5z M-195.5,432.5c1.1,0,2,0.9,2,2c0,1.1-0.9,2-2,2c-1.1,0-2-0.9-2-2C-197.5,433.4-196.6,432.5-195.5,432.5z M-167.5,404.5c1.1,0,2,0.9,2,2c0,1.1-0.9,2-2,2c-1.1,0-2-0.9-2-2C-169.5,405.4-168.6,404.5-167.5,404.5z" style="fill-rule: evenodd; clip-rule: evenodd"></path>
         </svg>
+        <span class="font-bold text-sm">SPECTACHAT</span>
       </div>
-      <button onclick="toggleSidebar()" class="md:hidden p-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+      <button onclick="toggleSidebar()" class="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
     </div>
-    <div class="p-3"><button onclick="newChat()" class="w-full flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium hover:bg-gray-50">+ New Chat</button></div>
+    <div class="p-3">
+      <button onclick="newChat()" class="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium hover:bg-gray-50 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        New Chat
+      </button>
+    </div>
     <div id="historyList" class="flex-1 overflow-y-auto p-3 text-sm space-y-1"></div>
+    <!-- Sidebar footer with settings -->
+    <div class="p-3 border-t">
+      <button onclick="openApiKeyModal()" class="w-full flex items-center gap-2 px-4 py-2 rounded-xl text-sm text-gray-600 hover:bg-gray-100 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        API Key Settings
+      </button>
+    </div>
   </aside>
 
   <!-- Main Content -->
   <main class="flex-1 flex flex-col relative bg-white">
     <header class="h-14 border-b flex items-center justify-between px-4 md:px-6 bg-white z-20">
       <div class="flex items-center gap-4">
-          <button onclick="toggleSidebar()" class="md:hidden p-2 rounded hover:bg-gray-100">
+        <button onclick="toggleSidebar()" class="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-          </button>
-          <div class="flex items-center">
-              <h1 class="font-bold text-lg">SPECTACHAT</h1>
-          </div>
+        </button>
+        <h1 class="font-bold text-lg">SPECTACHAT</h1>
       </div>
       <div class="flex items-center gap-3">
         <span id="statusBadge" class="px-2.5 py-1 bg-gray-100 text-gray-600 text-xs rounded-full hidden sm:inline-block">Guest</span>
+        <span id="aiStatusBadge" class="px-2.5 py-1 bg-gray-100 text-gray-500 text-xs rounded-full hidden sm:inline-flex items-center gap-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+          No AI Key
+        </span>
         <div id="headerAuthSection">
           <div id="loggedOutBtns" class="flex gap-2">
-             <button onclick="openModal('login')" class="px-4 py-1.5 bg-white border border-gray-200 text-black rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">Sign In</button>
-             <button onclick="openModal('signup')" class="px-4 py-1.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">Sign Up</button>
+            <button onclick="openModal('login')" class="px-4 py-1.5 bg-white border border-gray-200 text-black rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">Sign In</button>
+            <button onclick="openModal('signup')" class="px-4 py-1.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">Sign Up</button>
           </div>
           <div id="headerUserDropdown" class="hidden items-center gap-3 cursor-pointer relative" onclick="toggleUserMenu()">
             <div class="w-8 h-8 rounded-full bg-gray-800 text-white flex items-center justify-center text-xs font-bold" id="userAvatarHeader">U</div>
             <span class="text-sm font-medium hidden sm:block" id="userNameHeader">User</span>
-            <div id="userMenuDropdown" class="absolute top-12 right-0 w-48 bg-white rounded-lg shadow-xl border hidden z-50">
+            <div id="userMenuDropdown" class="absolute top-12 right-0 w-48 bg-white rounded-xl shadow-xl border hidden z-50 py-1">
               <div class="p-3 border-b">
                 <p class="text-sm font-semibold" id="menuUserName">User</p>
                 <p class="text-xs text-gray-500 truncate" id="menuUserEmail">email@example.com</p>
               </div>
-              <button onclick="logout()" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Sign Out</button>
-              <button onclick="deleteHistory()" class="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-b-lg">Delete History</button>
+              <button onclick="openApiKeyModal(); toggleUserMenu();" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                API Key Settings
+              </button>
+              <button onclick="logout()" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                Sign Out
+              </button>
+              <button onclick="deleteHistory()" class="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-b-xl">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                Delete History
+              </button>
             </div>
           </div>
         </div>
@@ -109,21 +193,27 @@
     <div id="chatContainer" class="flex-1 overflow-y-auto pb-32">
       <div class="max-w-3xl mx-auto py-8 px-4">
         <div id="messageList" class="space-y-6"></div>
-        <div id="emptyState" class="text-center py-20 text-gray-400">
-          <p class="text-lg font-medium">How can I help you today?</p>
-          <p class="text-sm mt-1">Sign in to save your chat history.</p>
+        <div id="emptyState" class="text-center py-20">
+          <div class="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-gray-400" viewBox="-245 355 85 85" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <path d="M-177.5,410.5c-2.2,0-4-1.8-4-4s1.8-4,4-4c2.2,0,4,1.8,4,4S-175.3,410.5-177.5,410.5z M-194.5,414.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7c3.9,0,7,3.1,7,7C-187.5,411.4-190.6,414.5-194.5,414.5z M-214.5,414.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7s7,3.1,7,7C-207.5,411.4-210.6,414.5-214.5,414.5z M-194.5,394.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7c3.9,0,7,3.1,7,7C-187.5,391.4-190.6,394.5-194.5,394.5z M-214.5,394.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7s7,3.1,7,7C-207.5,391.4-210.6,394.5-214.5,394.5z" style="fill-rule:evenodd;clip-rule:evenodd"/>
+            </svg>
+          </div>
+          <p class="text-lg font-semibold text-gray-700">How can I help you today?</p>
+          <p class="text-sm mt-1 text-gray-400" id="emptyStateSub">Enter your Gemini API key to start chatting</p>
         </div>
       </div>
     </div>
 
     <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent pt-6 pb-4 px-4">
       <div class="max-w-3xl mx-auto">
-        <div class="flex items-end gap-2 bg-gray-50 border border-gray-300 rounded-xl p-2 focus-within:border-black transition-colors">
-          <textarea id="userInput" rows="1" placeholder="Message SPECTACHAT..." class="flex-1 bg-transparent border-none outline-none resize-none text-sm py-2 max-h-32" onkeydown="handleKeyDown(event)"></textarea>
-          <button onclick="sendMessage()" class="p-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+        <div class="flex items-end gap-2 bg-gray-50 border border-gray-300 rounded-xl p-2 focus-within:border-black focus-within:bg-white transition-all">
+          <textarea id="userInput" rows="1" placeholder="Message SPECTACHAT..." class="flex-1 bg-transparent border-none outline-none resize-none text-sm py-2 max-h-32" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
+          <button onclick="sendMessage()" id="sendBtn" class="p-2.5 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors flex-shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
           </button>
         </div>
+        <p class="text-[10px] text-gray-400 text-center mt-1.5">SPECTACHAT may make mistakes. Verify important info.</p>
       </div>
     </div>
   </main>
@@ -131,18 +221,21 @@
 
 <script>
 // ================= CONFIG =================
-// FIX 1: Ensure no trailing slash on the URL
 const SUPABASE_URL = "https://jzzwdzcppxbltuueaagn.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp6endkemNwcHhibHR1dWVhYWduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Mjg0MTQsImV4cCI6MjA4OTUwNDQxNH0.sCdMZlK4O8KAtxkbQj6zdFakko_1ExFsJuDX7-u3qkM";
-const GEMINI_API_KEY = "AQ.Ab8RN6JNKDIjJsxvA9hz2kS4E3Ab9LXLxmdsH1-ZMwYgM99cIg";
 
-// FIX 2: Safe initialization to prevent silent crashes
+// Gemini API key — loaded from localStorage, NOT hardcoded
+let GEMINI_API_KEY = localStorage.getItem('spectachat_gemini_key') || '';
+let workingModelName = null;
+let isSending = false;
+
+// Supabase init
 let supabaseClient = null;
 try {
   if (typeof window.supabase !== 'undefined') {
     supabaseClient = window.supabase.createClient(SUPABASE_URL.replace(/\/+$/, ''), SUPABASE_KEY);
   } else {
-    console.error("Supabase library did not load.");
+    console.warn("Supabase JS library did not load.");
   }
 } catch (err) {
   console.error("Failed to init Supabase:", err);
@@ -151,252 +244,430 @@ try {
 let currentUser = null;
 let currentChatId = null;
 window.chatMemory = [];
-let workingModelName = null; 
 
-// ================= TOAST NOTIFICATIONS =================
+// ================= TOAST =================
 function showToast(message, type = 'info') {
   const container = document.getElementById('toastContainer');
   const toast = document.createElement('div');
-  const colors = {
-    success: 'bg-green-100 text-green-800 border-green-200',
-    error: 'bg-red-100 text-red-800 border-red-200',
-    info: 'bg-blue-100 text-blue-800 border-blue-200',
-    warning: 'bg-yellow-100 text-yellow-800 border-yellow-200'
+  const icons = {
+    success: '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>',
+    error: '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>',
+    info: '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+    warning: '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>'
   };
-  toast.className = `pointer-events-auto px-4 py-3 rounded-lg border text-sm shadow-lg toast-enter ${colors[type]}`;
-  toast.textContent = message;
+  const colors = {
+    success: 'bg-green-50 text-green-800 border-green-200',
+    error: 'bg-red-50 text-red-800 border-red-200',
+    info: 'bg-blue-50 text-blue-800 border-blue-200',
+    warning: 'bg-amber-50 text-amber-800 border-amber-200'
+  };
+  toast.className = `pointer-events-auto px-4 py-3 rounded-xl border text-sm shadow-lg toast-enter flex items-center gap-2 ${colors[type]}`;
+  toast.innerHTML = (icons[type] || '') + '<span>' + message + '</span>';
   container.appendChild(toast);
   setTimeout(() => { toast.classList.add('toast-exit'); setTimeout(() => toast.remove(), 300); }, 4000);
 }
 
-// ================= INITIALIZATION =================
-document.addEventListener('DOMContentLoaded', async () => {
-    if (supabaseClient) {
-      try {
-        const { data: { session } } = await supabaseClient.auth.getSession();
-        if (session) loadUser(session.user);
+// ================= TEXTAREA AUTO RESIZE =================
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 128) + 'px';
+}
 
-        supabaseClient.auth.onAuthStateChange((event, session) => {
-          if (event === 'SIGNED_IN' && session) loadUser(session.user);
-          if (event === 'SIGNED_OUT') logout();
-        });
-      } catch(e) {
-        console.error("Could not check session:", e);
-      }
-    }
-    
+// ================= INIT =================
+document.addEventListener('DOMContentLoaded', async () => {
+  // Check for existing API key
+  if (GEMINI_API_KEY) {
+    updateAIStatusBadge('connecting');
     await findWorkingModel();
+  } else {
+    updateAIStatusBadge('none');
+    // Show API key modal on first visit
+    openApiKeyModal();
+  }
+
+  // Supabase auth
+  if (supabaseClient) {
+    try {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (session) loadUser(session.user);
+
+      supabaseClient.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN' && session) loadUser(session.user);
+        if (event === 'SIGNED_OUT') resetUserUI();
+      });
+    } catch(e) {
+      console.error("Session check error:", e);
+    }
+  }
+
+  // Enter key on API key input
+  document.getElementById('apiKeyInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); saveAndTestKey(); }
+  });
 });
+
+// ================= AI STATUS BADGE =================
+function updateAIStatusBadge(status) {
+  const badge = document.getElementById('aiStatusBadge');
+  const sub = document.getElementById('emptyStateSub');
+  if (status === 'connected') {
+    badge.className = 'px-2.5 py-1 bg-green-50 text-green-700 text-xs rounded-full hidden sm:inline-flex items-center gap-1.5';
+    badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>AI Connected';
+    if (sub) sub.textContent = 'Start a conversation below';
+  } else if (status === 'connecting') {
+    badge.className = 'px-2.5 py-1 bg-amber-50 text-amber-700 text-xs rounded-full hidden sm:inline-flex items-center gap-1.5';
+    badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>Connecting...';
+  } else if (status === 'error') {
+    badge.className = 'px-2.5 py-1 bg-red-50 text-red-700 text-xs rounded-full hidden sm:inline-flex items-center gap-1.5';
+    badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>AI Error';
+    if (sub) sub.textContent = 'Fix your API key in settings to start chatting';
+  } else {
+    badge.className = 'px-2.5 py-1 bg-gray-100 text-gray-500 text-xs rounded-full hidden sm:inline-flex items-center gap-1.5';
+    badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>No AI Key';
+    if (sub) sub.textContent = 'Enter your Gemini API key to start chatting';
+  }
+}
+
+// ================= API KEY MODAL =================
+function openApiKeyModal() {
+  const input = document.getElementById('apiKeyInput');
+  if (GEMINI_API_KEY) {
+    // Show masked version of existing key
+    input.value = GEMINI_API_KEY;
+    input.type = 'password';
+  } else {
+    input.value = '';
+  }
+  document.getElementById('keyError').classList.add('hidden');
+  document.getElementById('saveKeyBtnText').textContent = GEMINI_API_KEY ? 'Update & Test Key' : 'Connect & Start Chatting';
+  document.getElementById('apiKeyModal').classList.remove('hidden');
+  document.getElementById('apiKeyModal').classList.add('flex');
+  setTimeout(() => input.focus(), 100);
+}
+
+function closeApiKeyModal() {
+  document.getElementById('apiKeyModal').classList.add('hidden');
+  document.getElementById('apiKeyModal').classList.remove('flex');
+}
+
+function toggleKeyVisibility() {
+  const input = document.getElementById('apiKeyInput');
+  input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+async function saveAndTestKey() {
+  const input = document.getElementById('apiKeyInput');
+  const key = input.value.trim();
+  const errorEl = document.getElementById('keyError');
+  const btnText = document.getElementById('saveKeyBtnText');
+  const spinner = document.getElementById('saveKeySpinner');
+
+  // Validate format
+  if (!key) {
+    errorEl.textContent = 'Please enter an API key.';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+  if (!key.startsWith('AIza')) {
+    errorEl.textContent = 'Invalid format — Gemini keys start with "AIza". Check you\'re pasting the correct key.';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+  if (key.length < 30) {
+    errorEl.textContent = 'Key seems too short. Make sure you copied the full key.';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+
+  errorEl.classList.add('hidden');
+  btnText.textContent = 'Testing...';
+  spinner.classList.remove('hidden');
+  document.getElementById('saveKeyBtn').disabled = true;
+
+  // Test the key
+  GEMINI_API_KEY = key;
+  const success = await findWorkingModel();
+
+  if (success) {
+    localStorage.setItem('spectachat_gemini_key', key);
+    closeApiKeyModal();
+    showToast('AI connected successfully!', 'success');
+  } else {
+    errorEl.textContent = 'Key was rejected by Google. Make sure it\'s a valid, active Gemini API key from aistudio.google.com.';
+    errorEl.classList.remove('hidden');
+    GEMINI_API_KEY = localStorage.getItem('spectachat_gemini_key') || '';
+  }
+
+  btnText.textContent = GEMINI_API_KEY ? 'Update & Test Key' : 'Connect & Start Chatting';
+  spinner.classList.add('hidden');
+  document.getElementById('saveKeyBtn').disabled = false;
+}
+
+function skipKeySetup() {
+  closeApiKeyModal();
+  showToast('You can set up your API key later from the sidebar settings.', 'info');
+}
 
 // ================= AUTO-DETECT MODEL =================
 async function findWorkingModel() {
+  if (!GEMINI_API_KEY) return false;
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${GEMINI_API_KEY}`);
+    const res = await fetch('https://generativelanguage.googleapis.com/v1/models?key=' + GEMINI_API_KEY);
     const data = await res.json();
-    
+
     if (data.models) {
-      const candidates = data.models.filter(m => 
-        m.supportedGenerationMethods && 
+      const candidates = data.models.filter(m =>
+        m.supportedGenerationMethods &&
         m.supportedGenerationMethods.includes("generateContent")
       );
-      
-      let found = candidates.find(m => m.name.includes("gemini-1.5-flash"));
+
+      let found = candidates.find(m => m.name.includes("gemini-2.0-flash"));
+      if (!found) found = candidates.find(m => m.name.includes("gemini-1.5-flash"));
       if (!found) found = candidates.find(m => m.name.includes("gemini-pro"));
       if (!found && candidates.length > 0) found = candidates[0];
-      
+
       if (found) {
         workingModelName = found.name;
-        console.log("Auto-detected working model:", workingModelName);
-        showToast('AI connected successfully', 'success');
-      } else {
-        console.error("No generateContent models found.");
-        showToast('No valid AI models found for your API Key.', 'error');
+        console.log("Working model:", workingModelName);
+        updateAIStatusBadge('connected');
+        return true;
       }
-    } else if (data.error) {
-       console.error("Model list error:", data.error);
-       showToast('AI API Key error: ' + data.error.message, 'error');
     }
+
+    if (data.error) {
+      console.error("Model list error:", data.error.message);
+      updateAIStatusBadge('error');
+      return false;
+    }
+
+    updateAIStatusBadge('error');
+    return false;
   } catch (e) {
-    console.error("Failed to fetch model list", e);
-    showToast('Could not reach AI service.', 'error');
+    console.error("Network error fetching models:", e);
+    updateAIStatusBadge('error');
+    return false;
   }
 }
 
 // ================= GEMINI AI =================
-async function generateAIResponse(prompt){
-  if (!workingModelName) {
-      return "⚠️ Error: AI Model not initialized. Check console logs (F12).";
+async function generateAIResponse(prompt) {
+  if (!workingModelName || !GEMINI_API_KEY) {
+    return "Please set up your Gemini API key first. Click the gear icon in the sidebar or the \"No AI Key\" badge above to add your key.\n\nGet a free key at: https://aistudio.google.com/apikey";
   }
 
-  window.chatMemory.push({role:"user", parts:[{text:prompt}]});
-  addMessageToUI('ai', 'Thinking...', true);
+  window.chatMemory.push({ role: "user", parts: [{ text: prompt }] });
+  addThinkingBubble();
 
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1/${workingModelName}:generateContent?key=${GEMINI_API_KEY}`, {
+    const url = 'https://generativelanguage.googleapis.com/v1/' + workingModelName + ':generateContent?key=' + GEMINI_API_KEY;
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: window.chatMemory })
+      body: JSON.stringify({
+        contents: window.chatMemory,
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2048
+        }
+      })
     });
 
     const data = await res.json();
-    removeThinkingIndicator();
+    removeThinkingBubble();
 
     if (data.error) {
-        return "⚠️ API Error: " + data.error.message;
+      const errMsg = data.error.message || 'Unknown error';
+      // If it's an auth error, mark the key as broken
+      if (errMsg.includes('API_KEY_INVALID') || errMsg.includes('invalid authentication')) {
+        updateAIStatusBadge('error');
+        localStorage.removeItem('spectachat_gemini_key');
+        GEMINI_API_KEY = '';
+        workingModelName = null;
+        return "Your API key is invalid or has been revoked. Please go to Settings and enter a new key.\n\nGet one free at: https://aistudio.google.com/apikey";
+      }
+      return "API Error: " + errMsg;
     }
-    
+
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+      return "The AI returned an empty response. Please try again.";
+    }
+
     const reply = data.candidates[0].content.parts[0].text;
-    window.chatMemory.push({role:"model", parts:[{text:reply}]});
+    window.chatMemory.push({ role: "model", parts: [{ text: reply }] });
     return reply;
 
-  } catch(e) {
-    removeThinkingIndicator();
-    console.error(e);
-    return "⚠️ Network Error: Could not reach AI.";
+  } catch (e) {
+    removeThinkingBubble();
+    console.error("Network error:", e);
+    return "Network error — could not reach the AI service. Check your internet connection.";
   }
 }
 
-function removeThinkingIndicator() {
-    const thinkMsg = document.querySelector('.thinking-bubble');
-    if (thinkMsg) thinkMsg.remove();
+function addThinkingBubble() {
+  const div = document.createElement('div');
+  div.className = 'flex gap-3 msg-enter thinking-bubble';
+  div.innerHTML = `
+    <div class="bg-gray-100 rounded-xl px-4 py-3 flex items-center gap-1.5">
+      <span class="w-2 h-2 bg-gray-400 rounded-full dot-1"></span>
+      <span class="w-2 h-2 bg-gray-400 rounded-full dot-2"></span>
+      <span class="w-2 h-2 bg-gray-400 rounded-full dot-3"></span>
+    </div>`;
+  document.getElementById('messageList').appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth' });
+}
+
+function removeThinkingBubble() {
+  const el = document.querySelector('.thinking-bubble');
+  if (el) el.remove();
 }
 
 // ================= UI =================
-function addMessageToUI(role, text, isThinking = false){
+function addMessageToUI(role, text) {
   const div = document.createElement('div');
-  div.className = `flex gap-3 msg-enter ${role==='user' ? 'justify-end' : ''}`;
-  if (isThinking) div.classList.add('thinking-bubble');
-  div.innerHTML = `<div class="max-w-md ${role==='user' ? 'bg-black text-white' : 'bg-gray-100 text-gray-800'} rounded-xl px-4 py-2.5 text-sm whitespace-pre-wrap">${text}</div>`;
-  if (isThinking) div.querySelector('div').classList.add('animate-pulse', 'text-gray-400');
+  div.className = 'flex gap-3 msg-enter ' + (role === 'user' ? 'justify-end' : '');
+
+  const bubble = document.createElement('div');
+  bubble.className = 'max-w-[85%] md:max-w-md text-sm whitespace-pre-wrap leading-relaxed rounded-2xl px-4 py-3 ';
+  if (role === 'user') {
+    bubble.className += 'bg-black text-white rounded-br-md';
+  } else {
+    bubble.className += 'bg-gray-100 text-gray-800 rounded-bl-md';
+  }
+
+  // Basic markdown: bold and inline code
+  let formatted = text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code class="bg-gray-200 text-gray-800 px-1 rounded text-xs font-mono">$1</code>')
+    .replace(/```([\s\S]*?)```/g, '<pre class="bg-gray-800 text-green-400 p-3 rounded-lg mt-2 mb-2 text-xs overflow-x-auto font-mono">$1</pre>')
+    .replace(/\n/g, '<br>');
+  bubble.innerHTML = formatted;
+
+  div.appendChild(bubble);
   document.getElementById('messageList').appendChild(div);
-  div.scrollIntoView({behavior:'smooth'});
+  div.scrollIntoView({ behavior: 'smooth' });
 }
 
-function handleKeyDown(e){ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(); } }
-function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('closed'); }
-function newChat(){ 
-    currentChatId = null; 
-    window.chatMemory = []; 
-    document.getElementById('messageList').innerHTML=''; 
-    document.getElementById('emptyState').classList.remove('hidden'); 
+function handleKeyDown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
 }
 
-// ================= MODAL =================
-function showTab(tab){ 
-  document.getElementById('loginForm').classList.toggle('hidden', tab!=='login'); 
-  document.getElementById('signupForm').classList.toggle('hidden', tab!=='signup'); 
-  document.getElementById('tabLogin').classList.toggle('border-black', tab==='login'); 
-  document.getElementById('tabLogin').classList.toggle('text-gray-500', tab!=='login');
-  document.getElementById('tabSignup').classList.toggle('border-black', tab==='signup'); 
-  document.getElementById('tabSignup').classList.toggle('text-gray-500', tab!=='signup');
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('closed');
+}
+
+function newChat() {
+  currentChatId = null;
+  window.chatMemory = [];
+  document.getElementById('messageList').innerHTML = '';
+  document.getElementById('emptyState').classList.remove('hidden');
+}
+
+// ================= AUTH MODAL =================
+function showTab(tab) {
+  document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
+  document.getElementById('signupForm').classList.toggle('hidden', tab !== 'signup');
+  document.getElementById('tabLogin').classList.toggle('border-black', tab === 'login');
+  document.getElementById('tabLogin').classList.toggle('text-gray-500', tab !== 'login');
+  document.getElementById('tabSignup').classList.toggle('border-black', tab === 'signup');
+  document.getElementById('tabSignup').classList.toggle('text-gray-500', tab !== 'signup');
   document.getElementById('loginError').classList.add('hidden');
   document.getElementById('signError').classList.add('hidden');
 }
 
-function openModal(tab){ 
-    showTab(tab); 
-    document.getElementById('loginModal').classList.remove('hidden'); 
-    document.getElementById('loginModal').classList.add('flex'); 
+function openModal(tab) {
+  showTab(tab);
+  document.getElementById('loginModal').classList.remove('hidden');
+  document.getElementById('loginModal').classList.add('flex');
 }
 
-function closeModal(){ 
-    document.getElementById('loginModal').classList.add('hidden'); 
-    document.getElementById('loginModal').classList.remove('flex');
+function closeModal() {
+  document.getElementById('loginModal').classList.add('hidden');
+  document.getElementById('loginModal').classList.remove('flex');
 }
 
 // ================= SUPABASE AUTH =================
-async function handleSignup(e){
+async function handleSignup(e) {
   e.preventDefault();
   if (!supabaseClient) {
-    document.getElementById('signError').textContent = "Auth service is not available. Check your connection.";
+    document.getElementById('signError').textContent = "Auth service unavailable. Check your connection.";
     document.getElementById('signError').classList.remove('hidden');
     return;
   }
-  const name = document.getElementById('signName').value;
-  const email = document.getElementById('signEmail').value;
+  const name = document.getElementById('signName').value.trim();
+  const email = document.getElementById('signEmail').value.trim();
   const pass = document.getElementById('signPass').value;
 
-  try {
-    const { data, error } = await supabaseClient.auth.signUp({
-      email: email,
-      password: pass,
-      options: { data: { name: name } }
-    });
+  const { data, error } = await supabaseClient.auth.signUp({
+    email, password: pass,
+    options: { data: { name } }
+  });
 
-    if (error) {
-      document.getElementById('signError').textContent = error.message;
-      document.getElementById('signError').classList.remove('hidden');
-      return;
-    }
-    
-    if (data.user && !data.session) {
-        showToast("Account created! Please check your email to verify.", 'success');
-        closeModal();
-    } else if (data.session) {
-        loadUser(data.user);
-        closeModal();
-    }
-  } catch(err) {
-    document.getElementById('signError').textContent = "Network error: " + err.message;
+  if (error) {
+    document.getElementById('signError').textContent = error.message;
     document.getElementById('signError').classList.remove('hidden');
+    return;
+  }
+
+  if (data.user && !data.session) {
+    showToast("Account created! Check your email to verify.", 'success');
+    closeModal();
+  } else if (data.session) {
+    loadUser(data.user);
+    closeModal();
   }
 }
 
-async function handleLogin(e){
+async function handleLogin(e) {
   e.preventDefault();
   if (!supabaseClient) {
-    document.getElementById('loginError').textContent = "Auth service is not available. Check your connection.";
+    document.getElementById('loginError').textContent = "Auth service unavailable.";
     document.getElementById('loginError').classList.remove('hidden');
     return;
   }
-  const email = document.getElementById('loginEmail').value;
+  const email = document.getElementById('loginEmail').value.trim();
   const pass = document.getElementById('loginPass').value;
 
-  try {
-    const { data, error } = await supabaseClient.auth.signInWithPassword({
-      email: email,
-      password: pass
-    });
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
 
-    if (error) {
-      document.getElementById('loginError').textContent = error.message;
-      document.getElementById('loginError').classList.remove('hidden');
-      return;
-    }
-
-    if (data.user) {
-      loadUser(data.user);
-      closeModal();
-    }
-  } catch(err) {
-    let msg = "Network error: " + err.message;
-    if (err.message && err.message.includes('Failed to fetch')) {
-      msg = "Cannot reach server. Is your Supabase project paused? (Free tier auto-pauses after 1 week)";
-    }
-    document.getElementById('loginError').textContent = msg;
+  if (error) {
+    document.getElementById('loginError').textContent = error.message;
     document.getElementById('loginError').classList.remove('hidden');
+    return;
+  }
+
+  if (data.user) {
+    loadUser(data.user);
+    closeModal();
   }
 }
 
-async function logout(){ 
-  if (supabaseClient) await supabaseClient.auth.signOut(); 
-  currentUser = null; 
-  newChat(); 
-  document.getElementById('headerUserDropdown').classList.add('hidden'); 
+async function logout() {
+  if (supabaseClient) await supabaseClient.auth.signOut();
+  resetUserUI();
+  newChat();
+  toggleUserMenu();
+}
+
+function resetUserUI() {
+  currentUser = null;
+  document.getElementById('headerUserDropdown').classList.add('hidden');
   document.getElementById('headerUserDropdown').classList.remove('flex');
-  document.getElementById('loggedOutBtns').classList.remove('hidden'); 
+  document.getElementById('loggedOutBtns').classList.remove('hidden');
   document.getElementById('loggedOutBtns').classList.add('flex');
-  document.getElementById('historyList').innerHTML = ''; 
+  document.getElementById('historyList').innerHTML = '';
   document.getElementById('statusBadge').textContent = 'Guest';
   document.getElementById('statusBadge').className = 'px-2.5 py-1 bg-gray-100 text-gray-600 text-xs rounded-full hidden sm:inline-block';
 }
 
-// ================= USER STATE =================
-async function loadUser(user){
+async function loadUser(user) {
   currentUser = user;
   document.getElementById('loggedOutBtns').classList.add('hidden');
   const dropdown = document.getElementById('headerUserDropdown');
-  dropdown.classList.remove('hidden'); 
+  dropdown.classList.remove('hidden');
   dropdown.classList.add('flex');
   const name = user.user_metadata?.name || 'User';
   document.getElementById('userAvatarHeader').textContent = name[0].toUpperCase();
@@ -404,92 +675,141 @@ async function loadUser(user){
   document.getElementById('menuUserName').textContent = name;
   document.getElementById('menuUserEmail').textContent = user.email;
   document.getElementById('statusBadge').textContent = 'Synced';
-  document.getElementById('statusBadge').className = 'px-2.5 py-1 bg-green-100 text-green-600 text-xs rounded-full hidden sm:inline-block';
+  document.getElementById('statusBadge').className = 'px-2.5 py-1 bg-green-50 text-green-700 text-xs rounded-full hidden sm:inline-block';
   showToast('Welcome back, ' + name + '!', 'success');
   loadUserHistory();
 }
 
 // ================= CHAT =================
-async function sendMessage(){
+async function sendMessage() {
+  if (isSending) return;
   const input = document.getElementById('userInput');
-  const text = input.value.trim(); 
-  if(!text) return;
+  const text = input.value.trim();
+  if (!text) return;
+
+  isSending = true;
+  document.getElementById('sendBtn').disabled = true;
   document.getElementById('emptyState').classList.add('hidden');
   addMessageToUI('user', text);
   input.value = '';
+  input.style.height = 'auto';
+
   const aiReply = await generateAIResponse(text);
   addMessageToUI('ai', aiReply);
-  if(currentUser && supabaseClient){
+
+  // Save to Supabase if logged in
+  if (currentUser && supabaseClient) {
     try {
-      const {error} = await supabaseClient.from('chats').insert([{
-          user_id: currentUser.id, 
-          user_msg: text, 
-          ai_msg: aiReply, 
-          created_at: new Date()
+      await supabaseClient.from('chats').insert([{
+        user_id: currentUser.id,
+        user_msg: text,
+        ai_msg: aiReply,
+        created_at: new Date().toISOString()
       }]);
-      if(error) console.error("DB Error:", error);
-      else loadUserHistory();
-    } catch(e) {
+      loadUserHistory();
+    } catch (e) {
       console.error("DB save error:", e);
     }
   }
+
+  isSending = false;
+  document.getElementById('sendBtn').disabled = false;
+  input.focus();
 }
 
-// ================= USER HISTORY =================
-async function loadUserHistory(){
-  if(!currentUser || !supabaseClient) return;
-  const {data, error} = await supabaseClient.from('chats').select('*').eq('user_id', currentUser.id).order('created_at', {ascending:false}).limit(10);
-  const list = document.getElementById('historyList'); 
+// ================= HISTORY =================
+async function loadUserHistory() {
+  if (!currentUser || !supabaseClient) return;
+  const { data, error } = await supabaseClient
+    .from('chats')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  const list = document.getElementById('historyList');
   list.innerHTML = '';
-  if(error) {
-      list.innerHTML = '<p class="text-xs text-red-400 p-2">Error loading history</p>';
-      return;
-  }
-  if(!data || data.length === 0) list.innerHTML = '<p class="text-xs text-gray-400 p-2">No history</p>';
-  if(data) {
-      data.forEach(d => {
-        const div = document.createElement('div');
-        div.className = 'p-2 rounded-lg cursor-pointer hover:bg-gray-100 truncate text-gray-700';
-        div.textContent = d.user_msg.substring(0, 25) + '...';
-        div.onclick = () => loadUserChat(d.id);
-        list.appendChild(div);
-      });
-  }
-}
 
-async function loadUserChat(id){
-  const {data} = await supabaseClient.from('chats').select('*').eq('id', id);
-  if(!data || data.length === 0) return;
-  currentChatId = id; 
-  document.getElementById('messageList').innerHTML = '';
-  document.getElementById('emptyState').classList.add('hidden');
-  window.chatMemory = [];
-  data.forEach(m => { 
-      addMessageToUI('user', m.user_msg); 
-      window.chatMemory.push({role:"user", parts:[{text:m.user_msg}]});
-      addMessageToUI('ai', m.ai_msg); 
-      window.chatMemory.push({role:"model", parts:[{text:m.ai_msg}]});
+  if (error) {
+    list.innerHTML = '<p class="text-xs text-red-400 p-2">Failed to load history</p>';
+    return;
+  }
+  if (!data || data.length === 0) {
+    list.innerHTML = '<p class="text-xs text-gray-400 p-2">No chat history yet</p>';
+    return;
+  }
+
+  // Group by date
+  const today = new Date().toDateString();
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
+
+  let currentLabel = '';
+  data.forEach(d => {
+    const msgDate = new Date(d.created_at).toDateString();
+    let label = '';
+    if (msgDate === today) label = 'Today';
+    else if (msgDate === yesterday) label = 'Yesterday';
+    else label = new Date(d.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+    if (label !== currentLabel) {
+      currentLabel = label;
+      const labelEl = document.createElement('p');
+      labelEl.className = 'text-[10px] uppercase tracking-wider text-gray-400 font-medium px-2 pt-3 pb-1';
+      labelEl.textContent = label;
+      list.appendChild(labelEl);
+    }
+
+    const div = document.createElement('div');
+    div.className = 'p-2 rounded-lg cursor-pointer hover:bg-gray-100 truncate text-gray-700 transition-colors text-sm';
+    div.textContent = d.user_msg.substring(0, 30) + (d.user_msg.length > 30 ? '...' : '');
+    div.onclick = () => loadUserChat(d.id);
+    list.appendChild(div);
   });
 }
 
-async function deleteHistory(){
-  if(!currentUser || !supabaseClient) return;
-  if(!confirm("Delete all history?")) return;
-  const {error} = await supabaseClient.from('chats').delete().eq('user_id', currentUser.id);
-  if(error) return alert("Error: " + error.message);
-  newChat(); 
-  loadUserHistory();
-  toggleUserMenu();
+async function loadUserChat(id) {
+  const { data } = await supabaseClient.from('chats').select('*').eq('id', id);
+  if (!data || data.length === 0) return;
+  currentChatId = id;
+  document.getElementById('messageList').innerHTML = '';
+  document.getElementById('emptyState').classList.add('hidden');
+  window.chatMemory = [];
+  data.forEach(m => {
+    addMessageToUI('user', m.user_msg);
+    window.chatMemory.push({ role: "user", parts: [{ text: m.user_msg }] });
+    addMessageToUI('ai', m.ai_msg);
+    window.chatMemory.push({ role: "model", parts: [{ text: m.ai_msg }] });
+  });
+  // Close sidebar on mobile after selecting
+  if (window.innerWidth < 768) toggleSidebar();
 }
 
-// ================= MENU =================
-function toggleUserMenu(){ 
-    document.getElementById('userMenuDropdown').classList.toggle('hidden'); 
+async function deleteHistory() {
+  if (!currentUser || !supabaseClient) return;
+  if (!confirm("Delete all your chat history? This cannot be undone.")) return;
+  const { error } = await supabaseClient.from('chats').delete().eq('user_id', currentUser.id);
+  if (error) return showToast("Error: " + error.message, 'error');
+  newChat();
+  loadUserHistory();
+  showToast('Chat history deleted', 'info');
+}
+
+// ================= USER MENU =================
+function toggleUserMenu() {
+  document.getElementById('userMenuDropdown').classList.toggle('hidden');
 }
 document.addEventListener('click', e => {
-  const dropdown = document.getElementById('headerUserDropdown'); 
-  const menu = document.getElementById('userMenuDropdown'); 
-  if(dropdown && menu && !dropdown.contains(e.target)) menu.classList.add('hidden');
+  const dropdown = document.getElementById('headerUserDropdown');
+  const menu = document.getElementById('userMenuDropdown');
+  if (dropdown && menu && !dropdown.contains(e.target)) menu.classList.add('hidden');
+});
+
+// Close modals on backdrop click
+document.getElementById('apiKeyModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('apiKeyModal')) closeApiKeyModal();
+});
+document.getElementById('loginModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('loginModal')) closeModal();
 });
 </script>
 </body>
