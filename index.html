@@ -63,7 +63,6 @@
 
 <!-- MAIN APP -->
 <div class="flex h-full w-full">
-  <!-- Sidebar -->
   <aside id="sidebar" class="sidebar closed fixed inset-y-0 left-0 z-30 w-64 bg-white border-r flex flex-col md:relative">
     <div class="p-4 border-b flex justify-between items-center">
       <div class="flex items-center gap-2">
@@ -87,7 +86,6 @@
     </div>
   </aside>
 
-  <!-- Main -->
   <main class="flex-1 flex flex-col relative bg-white">
     <header class="h-14 border-b flex items-center justify-between px-4 md:px-6 bg-white z-20">
       <div class="flex items-center gap-4">
@@ -133,8 +131,6 @@
               <h2 class="text-xl font-bold text-gray-900 mb-1">Connect Google Gemini</h2>
               <p class="text-sm text-gray-500">Free API key required. Takes about 30 seconds.</p>
             </div>
-
-            <!-- Steps -->
             <div class="space-y-3 mb-6">
               <div class="flex items-start gap-3">
                 <div class="step-num bg-gray-900 text-white mt-0.5">1</div>
@@ -146,18 +142,16 @@
               </div>
               <div class="flex items-start gap-3">
                 <div class="step-num bg-gray-900 text-white mt-0.5">3</div>
-                <p class="text-sm text-gray-700 leading-relaxed">Click <strong>"Create API key"</strong>, select <strong>"Create API key in new project"</strong>, then click <strong>"Create"</strong></p>
+                <p class="text-sm text-gray-700 leading-relaxed">Click <strong>"Create API key"</strong>, select a project, then click <strong>"Create"</strong></p>
               </div>
               <div class="flex items-start gap-3">
                 <div class="step-num bg-gray-900 text-white mt-0.5">4</div>
-                <p class="text-sm text-gray-700 leading-relaxed">Copy the key that appears (it starts with <code class="bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded text-xs font-mono font-semibold">AIza...</code>) and paste it below</p>
+                <p class="text-sm text-gray-700 leading-relaxed">Copy the full key that appears and paste it below</p>
               </div>
             </div>
-
-            <!-- Input -->
             <div class="space-y-3">
               <div class="relative">
-                <input type="text" id="inlineKeyInput" placeholder="AIza..." class="key-input w-full p-3 pr-11 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-sm font-mono bg-gray-50" autocomplete="off" spellcheck="false">
+                <input type="text" id="inlineKeyInput" placeholder="Paste your Gemini API key here..." class="key-input w-full p-3 pr-11 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-sm font-mono bg-gray-50" autocomplete="off" spellcheck="false">
                 <button type="button" onclick="toggleInlineKeyVis()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5">
                   <svg id="inlineEyeIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                 </button>
@@ -202,7 +196,7 @@
 const SUPABASE_URL = "https://jzzwdzcppxbltuueaagn.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp6endkemNwcHhibHR1dWVhYWduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Mjg0MTQsImV4cCI6MjA4OTUwNDQxNH0.sCdMZlK4O8KAtxkbQj6zdFakko_1ExFsJuDX7-u3qkM";
 
-// Known Gemini models in priority order (newest first)
+// Models to try, newest first — no assumptions about key format
 const MODEL_CANDIDATES = [
   'models/gemini-2.5-flash-preview-05-20',
   'models/gemini-2.5-flash-preview-04-17',
@@ -334,40 +328,68 @@ async function connectInlineKey() {
   const btnTxt = document.getElementById('inlineBtnText');
   const spin = document.getElementById('inlineSpinner');
   const btn = document.getElementById('inlineConnectBtn');
-  const key = inp.value.trim();
+
+  // Clean the key: trim whitespace, remove any accidental newlines
+  const key = inp.value.trim().replace(/[\r\n]/g, '');
 
   err.classList.add('hidden');
 
-  if (!key) { err.textContent = 'Please paste your API key.'; err.classList.remove('hidden'); inp.focus(); return; }
-  if (!key.startsWith('AIza')) { err.textContent = 'This doesn\'t look like a Gemini key. It must start with "AIza". Make sure you\'re copying from the Google AI Studio page.'; err.classList.remove('hidden'); inp.focus(); return; }
-  if (key.length < 30) { err.textContent = 'The key seems incomplete. Make sure you copied the entire key.'; err.classList.remove('hidden'); inp.focus(); return; }
+  // NO prefix check — Google changes key formats. Only basic sanity checks.
+  if (!key) {
+    err.textContent = 'Please paste your API key.';
+    err.classList.remove('hidden');
+    inp.focus();
+    return;
+  }
+  if (key.length < 20) {
+    err.textContent = 'This key seems too short. Make sure you copied the entire key from Google AI Studio.';
+    err.classList.remove('hidden');
+    inp.focus();
+    return;
+  }
 
-  btnTxt.textContent = 'Testing key...';
+  btnTxt.textContent = 'Testing key with Google...';
   spin.classList.remove('hidden');
   btn.disabled = true;
   setAIState('connecting');
 
   GEMINI_API_KEY = key;
-  const ok = await findWorkingModel();
+  const result = await findWorkingModel();
 
-  if (ok) {
+  if (result.ok) {
     localStorage.setItem('spectachat_gemini_key', key);
     setAIState('connected');
     refreshEmptyState();
-    showToast('Gemini AI connected!', 'success');
+    showToast('Gemini AI connected! Using ' + result.model.replace('models/',''), 'success');
     document.getElementById('userInput').focus();
   } else {
     GEMINI_API_KEY = '';
     workingModelName = null;
+
+    // Show specific error from Google
+    let errorHtml = '';
+    if (result.error) {
+      errorHtml = 'Google says: <strong>"' + escapeHtml(result.error) + '"</strong><br><br>';
+    }
+    errorHtml += 'Possible fixes:<br>';
+    errorHtml += '&bull; Make sure you copied the <strong>entire</strong> key with no extra spaces<br>';
+    errorHtml += '&bull; Make sure the key was created for the <strong>Generative Language API</strong> (not a different Google API)<br>';
+    errorHtml += '&bull; Try creating a <strong>new key</strong> at <a href="https://aistudio.google.com/" target="_blank" class="underline font-semibold">aistudio.google.com</a><br>';
+    errorHtml += '&bull; Make sure the API is <strong>enabled</strong> in your Google Cloud project';
+
     setAIState('error');
     refreshEmptyState();
-    err.innerHTML = 'Google rejected this key. Possible reasons:<br>• Key was copied incorrectly (extra spaces?)<br>• Key was revoked or expired<br>• The Generative Language API isn\'t enabled for your project<br><br>Try creating a fresh key at <a href="https://aistudio.google.com/" target="_blank" class="underline font-semibold">aistudio.google.com</a>';
+    err.innerHTML = errorHtml;
     err.classList.remove('hidden');
   }
 
   btnTxt.textContent = GEMINI_API_KEY ? 'Update Key' : 'Connect AI';
   spin.classList.add('hidden');
   btn.disabled = false;
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 function showKeySetup() {
@@ -393,9 +415,9 @@ function showKeySetup() {
 
 // ===================== FIND WORKING MODEL =====================
 async function findWorkingModel() {
-  if (!GEMINI_API_KEY) return false;
+  if (!GEMINI_API_KEY) return { ok: false, error: 'No key provided' };
 
-  // Strategy 1: Try each known model directly with a tiny test request
+  // Strategy: try each model directly with a real API call
   for (const model of MODEL_CANDIDATES) {
     try {
       const res = await fetch('https://generativelanguage.googleapis.com/v1/' + model + ':generateContent?key=' + GEMINI_API_KEY, {
@@ -406,55 +428,82 @@ async function findWorkingModel() {
           generationConfig: { maxOutputTokens: 5 }
         })
       });
+
       if (res.ok) {
         const data = await res.json();
         if (data.candidates && data.candidates[0]) {
           workingModelName = model;
-          console.log('Working model found:', model);
-          return true;
+          console.log('Working model:', model);
+          return { ok: true, model: model };
         }
       }
-      // If 400 with "not found" or similar, try next model
-      if (res.status === 404 || res.status === 400) continue;
-      // If 401/403, the key itself is bad — stop trying
+
+      // Parse error to understand what happened
+      const errData = await res.json().catch(() => ({}));
+      const errMsg = errData.error ? errData.error.message : '';
+
+      // Auth errors = key is bad, stop trying models
       if (res.status === 401 || res.status === 403) {
-        console.error('Key auth failed:', res.status);
-        return false;
+        return { ok: false, error: errMsg || 'Authentication failed (HTTP ' + res.status + '). Your key was rejected.' };
       }
+
+      // Model not found / invalid = try next model
+      if (res.status === 404 || res.status === 400 || errMsg.includes('not found') || errMsg.includes('does not exist')) {
+        console.log('Model ' + model + ' not available, trying next...');
+        continue;
+      }
+
+      // Other errors (rate limit, etc.) — try next model
+      console.log('Model ' + model + ' error: ' + errMsg);
+      continue;
+
     } catch (e) {
-      // Network error — try next
+      // Network error — try next model
       continue;
     }
   }
 
-  // Strategy 2: Fallback — list models and pick one
+  // All models failed — try the list endpoint as last resort
   try {
     const res = await fetch('https://generativelanguage.googleapis.com/v1/models?key=' + GEMINI_API_KEY);
-    if (!res.ok) return false;
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      return { ok: false, error: errData.error ? errData.error.message : 'Failed to connect (HTTP ' + res.status + ')' };
+    }
     const data = await res.json();
-    if (data.error) return false;
-    if (!data.models) return false;
+    if (data.error) return { ok: false, error: data.error.message };
+    if (!data.models || !data.models.length) return { ok: false, error: 'No models found for this key. Make sure the Generative Language API is enabled.' };
 
     const candidates = data.models.filter(m =>
       m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent')
     );
 
-    let found = candidates.find(m => m.name.includes('gemini-2.5-flash'));
-    if (!found) found = candidates.find(m => m.name.includes('gemini-2.0-flash'));
-    if (!found) found = candidates.find(m => m.name.includes('gemini-1.5-flash'));
-    if (!found) found = candidates.find(m => m.name.includes('gemini-pro'));
-    if (!found && candidates.length > 0) found = candidates[0];
-
-    if (found) {
-      workingModelName = found.name;
-      console.log('Fallback model:', workingModelName);
-      return true;
+    // Try the first few from the list
+    for (const m of candidates.slice(0, 5)) {
+      try {
+        const testRes = await fetch('https://generativelanguage.googleapis.com/v1/' + m.name + ':generateContent?key=' + GEMINI_API_KEY, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: 'Hi' }] }],
+            generationConfig: { maxOutputTokens: 5 }
+          })
+        });
+        if (testRes.ok) {
+          const testData = await testRes.json();
+          if (testData.candidates && testData.candidates[0]) {
+            workingModelName = m.name;
+            return { ok: true, model: m.name };
+          }
+        }
+      } catch(e) { continue; }
     }
-  } catch (e) {
-    console.error('Fallback model list failed:', e);
-  }
 
-  return false;
+    return { ok: false, error: 'Found ' + candidates.length + ' model(s) but none responded successfully. The API may be temporarily down.' };
+
+  } catch (e) {
+    return { ok: false, error: 'Network error: ' + e.message };
+  }
 }
 
 // ===================== GEMINI AI CALL =====================
@@ -484,32 +533,39 @@ async function generateAIResponse(prompt) {
 
     if (data.error) {
       const msg = data.error.message || 'Unknown error';
-      if (msg.includes('API_KEY_INVALID') || msg.includes('invalid authentication') || msg.includes('PERMISSION_DENIED') || data.error.status === 'PERMISSION_DENIED') {
+
+      // Auth failure — kill the key
+      if (res.status === 401 || res.status === 403 || msg.includes('API_KEY_INVALID') || msg.includes('invalid authentication') || msg.includes('PERMISSION_DENIED')) {
         GEMINI_API_KEY = '';
         workingModelName = null;
         localStorage.removeItem('spectachat_gemini_key');
         setAIState('error');
         refreshEmptyState();
-        return 'Your API key was rejected by Google (it may have been revoked or the API needs to be re-enabled in your Google Cloud project).\n\nGo to the sidebar and click "Fix API Key" to enter a new one.';
+        return 'Your API key was rejected by Google. It may have been revoked.\n\nClick "Fix API Key" in the sidebar to enter a new one.\n\nGet a key at: https://aistudio.google.com';
       }
-      // If model-specific error, try to find another model
-      if (msg.includes('not found') || msg.includes('does not exist')) {
-        console.log('Model ' + workingModelName + ' failed, trying to find another...');
-        const ok = await findWorkingModel();
-        if (ok) {
+
+      // Model went away — try to find another one automatically
+      if (msg.includes('not found') || msg.includes('does not exist') || res.status === 404) {
+        const retry = await findWorkingModel();
+        if (retry.ok) {
           setAIState('connected');
-          // Retry with new model
+          // Remove the user message we added (we'll re-add it in the recursive call)
+          window.chatMemory.pop();
           return await generateAIResponse(prompt);
         }
         setAIState('error');
         refreshEmptyState();
-        return 'The AI model became unavailable. Please try again or set a new API key.';
+        return 'The AI model became unavailable and no fallback was found. Please try again later or set a new API key.';
       }
+
       return 'API Error: ' + msg;
     }
 
     if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts) {
-      return 'The AI returned an empty or blocked response. Try rephrasing your message.';
+      // Sometimes Google returns a finish reason like SAFETY without content
+      const finishReason = data.candidates && data.candidates[0] && data.candidates[0].finishReason;
+      if (finishReason === 'SAFETY') return 'Your message was blocked by Google\'s safety filter. Try rephrasing it.';
+      return 'The AI returned an empty response. Try rephrasing your message.';
     }
 
     const reply = data.candidates[0].content.parts[0].text;
