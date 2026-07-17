@@ -9,84 +9,34 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  body { font-family: 'Inter', sans-serif; background-color: #f9fafb; }
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
-  @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-  @keyframes toastIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
-  @keyframes toastOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(100%); } }
-  @keyframes dotBounce {
-    0%, 80%, 100% { transform: translateY(0); }
-    40% { transform: translateY(-6px); }
-  }
-  .msg-enter { animation: slideIn 0.3s ease-out; }
-  .sidebar { transition: transform 0.3s ease-in-out; }
-  .sidebar.closed { transform: translateX(-100%); }
-  @media (min-width: 768px) { .sidebar.closed { transform: translateX(0); } }
-  .toast-enter { animation: toastIn 0.4s ease-out; }
-  .toast-exit { animation: toastOut 0.3s ease-in forwards; }
-  .dot-1 { animation: dotBounce 1.4s ease-in-out infinite; }
-  .dot-2 { animation: dotBounce 1.4s ease-in-out 0.2s infinite; }
-  .dot-3 { animation: dotBounce 1.4s ease-in-out 0.4s infinite; }
-  .key-input::placeholder { color: #9ca3af; }
-  .key-input:-webkit-autofill { -webkit-box-shadow: 0 0 0 30px #f3f4f6 inset !important; -webkit-text-fill-color: #111827 !important; }
+  body{font-family:'Inter',sans-serif;background:#f9fafb}
+  ::-webkit-scrollbar{width:6px}
+  ::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:3px}
+  @keyframes slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes toastIn{from{opacity:0;transform:translateX(100%)}to{opacity:1;transform:translateX(0)}}
+  @keyframes toastOut{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(100%)}}
+  @keyframes dotBounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+  .msg-enter{animation:slideIn .3s ease-out}
+  .sidebar{transition:transform .3s ease-in-out}
+  .sidebar.closed{transform:translateX(-100%)}
+  @media(min-width:768px){.sidebar.closed{transform:translateX(0)}}
+  .toast-enter{animation:toastIn .4s ease-out}
+  .toast-exit{animation:toastOut .3s ease-in forwards}
+  .dot-1{animation:dotBounce 1.4s ease-in-out infinite}
+  .dot-2{animation:dotBounce 1.4s ease-in-out .2s infinite}
+  .dot-3{animation:dotBounce 1.4s ease-in-out .4s infinite}
+  .fade-in{animation:fadeIn .4s ease-out}
+  .setup-card{background:linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 50%,#f0f9ff 100%);border:1px solid #bae6fd}
+  .setup-card:hover{border-color:#7dd3fc}
+  .key-input:-webkit-autofill{-webkit-box-shadow:0 0 0 30px #f3f4f6 inset!important;-webkit-text-fill-color:#111827!important}
+  .send-disabled{opacity:.4;pointer-events:none}
 </style>
 </head>
 <body class="h-screen flex overflow-hidden">
 
-<!-- TOAST CONTAINER -->
 <div id="toastContainer" class="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none"></div>
-
-<!-- API KEY SETUP MODAL -->
-<div id="apiKeyModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] hidden items-center justify-center">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8 m-4 relative">
-    <div class="flex items-center gap-3 mb-2">
-      <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
-      </div>
-      <div>
-        <h2 class="text-xl font-bold text-gray-900">Connect Your AI</h2>
-        <p class="text-sm text-gray-500">Enter a Google Gemini API key to get started</p>
-      </div>
-    </div>
-
-    <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-      <div class="flex gap-2">
-        <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        <div class="text-sm text-amber-800">
-          <p class="font-semibold mb-1">How to get your free API key:</p>
-          <ol class="list-decimal list-inside space-y-0.5 text-amber-700">
-            <li>Go to <a href="https://aistudio.google.com/apikey" target="_blank" class="underline font-medium hover:text-amber-900">aistudio.google.com/apikey</a></li>
-            <li>Sign in with your Google account</li>
-            <li>Click "Create API Key" and copy it</li>
-            <li>Paste it below — it starts with <code class="bg-amber-100 px-1 rounded text-xs font-mono">AIza...</code></li>
-          </ol>
-        </div>
-      </div>
-    </div>
-
-    <div class="mt-5">
-      <label class="block text-sm font-medium text-gray-700 mb-1.5">Gemini API Key</label>
-      <div class="relative">
-        <input type="password" id="apiKeyInput" placeholder="AIza..." class="key-input w-full p-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-sm font-mono bg-gray-50" autocomplete="off">
-        <button type="button" onclick="toggleKeyVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-          <svg id="eyeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-        </button>
-      </div>
-      <p id="keyError" class="text-red-500 text-xs mt-1.5 hidden"></p>
-    </div>
-
-    <button onclick="saveAndTestKey()" id="saveKeyBtn" class="mt-5 w-full bg-black text-white p-3 rounded-xl font-medium hover:bg-gray-800 transition-colors flex items-center justify-center gap-2">
-      <span id="saveKeyBtnText">Connect & Start Chatting</span>
-      <svg id="saveKeySpinner" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-    </button>
-
-    <button onclick="skipKeySetup()" class="mt-2 w-full text-center text-sm text-gray-400 hover:text-gray-600 py-2 transition-colors">
-      Skip — use without AI
-    </button>
-  </div>
-</div>
 
 <!-- LOGIN MODAL -->
 <div id="loginModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden items-center justify-center">
@@ -122,11 +72,11 @@
     <div class="p-4 border-b flex justify-between items-center">
       <div class="flex items-center gap-2">
         <svg class="w-6 h-6" viewBox="-245 355 85 85" fill="#3B82F6" xmlns="http://www.w3.org/2000/svg">
-          <path d="M-167.5,390.5c-1.1,0-2-0.9-2-2c0-1.1,0.9-2,2-2c1.1,0,2,0.9,2,2C-165.5,389.6-166.4,390.5-167.5,390.5z M-177.5,428.5c-2.2,0-4-1.8-4-4s1.8-4,4-4c2.2,0,4,1.8,4,4S-175.3,428.5-177.5,428.5z M-177.5,410.5c-2.2,0-4-1.8-4-4s1.8-4,4-4c2.2,0,4,1.8,4,4S-175.3,410.5-177.5,410.5z M-177.5,392.5c-2.2,0-4-1.8-4-4c0-2.2,1.8-4,4-4c2.2,0,4,1.8,4,4C-173.5,390.7-175.3,392.5-177.5,392.5z M-177.5,374.5c-2.2,0-4-1.8-4-4c0-2.2,1.8-4,4-4c2.2,0,4,1.8,4,4C-173.5,372.7-175.3,374.5-177.5,374.5z M-194.5,414.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7c3.9,0,7,3.1,7,7C-187.5,411.4-190.6,414.5-194.5,414.5z M-194.5,394.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7c3.9,0,7,3.1,7,7C-187.5,391.4-190.6,394.5-194.5,394.5z M-195.5,374.5c-2.2,0-4-1.8-4-4c0-2.2,1.8-4,4-4c2.2,0,4,1.8,4,4C-191.5,372.7-193.3,374.5-195.5,374.5z M-195.5,362.5c-1.1,0-2-0.9-2-2c0-1.1,0.9-2,2-2c1.1,0,2,0.9,2,2C-193.5,361.6-194.4,362.5-195.5,362.5z M-214.5,414.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7s7,3.1,7,7C-207.5,411.4-210.6,414.5-214.5,414.5z M-214.5,394.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7s7,3.1,7,7C-207.5,391.4-210.6,394.5-214.5,394.5z M-213.5,374.5c-2.2,0-4-1.8-4-4c0-2.2,1.8-4,4-4c2.2,0,4,1.8,4,4C-209.5,372.7-211.3,374.5-213.5,374.5z M-213.5,362.5c-1.1,0-2-0.9-2-2c0-1.1,0.9-2,2-2c1.1,0,2,0.9,2,2C-211.5,361.6-212.4,362.5-213.5,362.5z M-231.5,374.5c-2.2,0-4-1.8-4-4c0-2.2,1.8-4,4-4c2.2,0,4,1.8,4,4C-227.5,372.7-229.3,374.5-231.5,374.5z M-231.5,384.5c2.2,0,4,1.8,4,4c0,2.2-1.8,4-4,4c-2.2,0-4-1.8-4-4C-235.5,386.3-233.7,384.5-231.5,384.5z M-241.5,408.5c-1.1,0-2-0.9-2-2c0-1.1,0.9-2,2-2c1.1,0,2,0.9,2,2C-239.5,407.6-240.4,408.5-241.5,408.5z M-241.5,390.5c-1.1,0-2-0.9-2-2c0-1.1,0.9-2,2-2c1.1,0,2,0.9,2,2C-239.5,389.6-240.4,390.5-241.5,390.5z M-231.5,402.5c2.2,0,4,1.8,4,4s-1.8,4-4,4c-2.2,0-4-1.8-4-4S-233.7,402.5-231.5,402.5z M-231.5,420.5c2.2,0,4,1.8,4,4s-1.8,4-4,4c-2.2,0-4-1.8-4-4S-233.7,420.5-231.5,420.5z M-213.5,420.5c2.2,0,4,1.8,4,4c0,2.2-1.8,4-4,4c-2.2,0-4-1.8-4-4C-217.5,422.3-215.7,420.5-213.5,420.5z M-213.5,432.5c1.1,0,2,0.9,2,2c0,1.1-0.9,2-2,2c-1.1,0-2-0.9-2-2C-215.5,433.4-214.6,432.5-213.5,432.5z M-195.5,420.5c2.2,0,4,1.8,4,4c0,2.2-1.8,4-4-4c-2.2,0-4-1.8-4-4C-199.5,422.3-197.7,420.5-195.5,420.5z M-195.5,432.5c1.1,0,2,0.9,2,2c0,1.1-0.9,2-2,2c-1.1,0-2-0.9-2-2C-197.5,433.4-196.6,432.5-195.5,432.5z M-167.5,404.5c1.1,0,2,0.9,2,2c0,1.1-0.9,2-2,2c-1.1,0-2-0.9-2-2C-169.5,405.4-168.6,404.5-167.5,404.5z" style="fill-rule: evenodd; clip-rule: evenodd"></path>
+          <path d="M-167.5,390.5c-1.1,0-2-0.9-2-2c0-1.1,0.9-2,2-2c1.1,0,2,0.9,2,2C-165.5,389.6-166.4,390.5-167.5,390.5z M-177.5,428.5c-2.2,0-4-1.8-4-4s1.8-4,4-4c2.2,0,4,1.8,4,4S-175.3,428.5-177.5,428.5z M-177.5,410.5c-2.2,0-4-1.8-4-4s1.8-4,4-4c2.2,0,4,1.8,4,4S-175.3,410.5-177.5,410.5z M-177.5,392.5c-2.2,0-4-1.8-4-4c0-2.2,1.8-4,4-4c2.2,0,4,1.8,4,4C-173.5,390.7-175.3,392.5-177.5,392.5z M-177.5,374.5c-2.2,0-4-1.8-4-4c0-2.2,1.8-4,4-4c2.2,0,4,1.8,4,4C-173.5,372.7-175.3,374.5-177.5,374.5z M-194.5,414.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7c3.9,0,7,3.1,7,7C-187.5,411.4-190.6,414.5-194.5,414.5z M-194.5,394.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7c3.9,0,7,3.1,7,7C-187.5,391.4-190.6,394.5-194.5,394.5z M-195.5,374.5c-2.2,0-4-1.8-4-4c0-2.2,1.8-4,4-4c2.2,0,4,1.8,4,4C-191.5,372.7-193.3,374.5-195.5,374.5z M-195.5,362.5c-1.1,0-2-0.9-2-2c0-1.1,0.9-2,2-2c1.1,0,2,0.9,2,2C-193.5,361.6-194.4,362.5-195.5,362.5z M-214.5,414.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7s7,3.1,7,7C-207.5,411.4-210.6,414.5-214.5,414.5z M-214.5,394.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7s7,3.1,7,7C-207.5,391.4-210.6,394.5-214.5,394.5z M-213.5,374.5c-2.2,0-4-1.8-4-4c0-2.2,1.8-4,4-4c2.2,0,4,1.8,4,4C-209.5,372.7-211.3,374.5-213.5,374.5z M-213.5,362.5c-1.1,0-2-0.9-2-2c0-1.1,0.9-2,2-2c1.1,0,2,0.9,2,2C-211.5,361.6-212.4,362.5-213.5,362.5z M-231.5,374.5c-2.2,0-4-1.8-4-4c0-2.2,1.8-4,4-4c2.2,0,4,1.8,4,4C-227.5,372.7-229.3,374.5-231.5,374.5z M-231.5,384.5c2.2,0,4,1.8,4,4c0,2.2-1.8,4-4,4c-2.2,0-4-1.8-4-4C-235.5,386.3-233.7,384.5-231.5,384.5z M-241.5,408.5c-1.1,0-2-0.9-2-2c0-1.1,0.9-2,2-2c1.1,0,2,0.9,2,2C-239.5,407.6-240.4,408.5-241.5,408.5z M-241.5,390.5c-1.1,0-2-0.9-2-2c0-1.1,0.9-2,2-2c1.1,0,2,0.9,2,2C-239.5,389.6-240.4,390.5-241.5,390.5z M-231.5,402.5c2.2,0,4,1.8,4,4s-1.8,4-4,4c-2.2,0-4-1.8-4-4S-233.7,402.5-231.5,402.5z M-231.5,420.5c2.2,0,4,1.8,4,4s-1.8,4-4,4c-2.2,0-4-1.8-4-4S-233.7,420.5-231.5,420.5z M-213.5,420.5c2.2,0,4,1.8,4,4c0,2.2-1.8,4-4,4c-2.2,0-4-1.8-4-4C-217.5,422.3-215.7,420.5-213.5,420.5z M-213.5,432.5c1.1,0,2,0.9,2,2c0,1.1-0.9,2-2,2c-1.1,0-2-0.9-2-2C-215.5,433.4-214.6,432.5-213.5,432.5z M-195.5,420.5c2.2,0,4,1.8,4,4c0,2.2-1.8,4-4-4c-2.2,0-4-1.8-4-4C-199.5,422.3-197.7,420.5-195.5,420.5z M-195.5,432.5c1.1,0,2,0.9,2,2c0,1.1-0.9,2-2,2c-1.1,0-2-0.9-2-2C-197.5,433.4-196.6,432.5-195.5,432.5z M-167.5,404.5c1.1,0,2,0.9,2,2c0,1.1-0.9,2-2,2c-1.1,0-2-0.9-2-2C-169.5,405.4-168.6,404.5-167.5,404.5z" style="fill-rule:evenodd;clip-rule:evenodd"></path>
         </svg>
         <span class="font-bold text-sm">SPECTACHAT</span>
       </div>
-      <button onclick="toggleSidebar()" class="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+      <button onclick="toggleSidebar()" class="md:hidden p-2 hover:bg-gray-100 rounded-lg"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
     </div>
     <div class="p-3">
       <button onclick="newChat()" class="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium hover:bg-gray-50 transition-colors">
@@ -135,11 +85,10 @@
       </button>
     </div>
     <div id="historyList" class="flex-1 overflow-y-auto p-3 text-sm space-y-1"></div>
-    <!-- Sidebar footer with settings -->
     <div class="p-3 border-t">
-      <button onclick="openApiKeyModal()" class="w-full flex items-center gap-2 px-4 py-2 rounded-xl text-sm text-gray-600 hover:bg-gray-100 transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-        API Key Settings
+      <button onclick="showKeySetup()" class="w-full flex items-center gap-2 px-4 py-2 rounded-xl text-sm text-gray-600 hover:bg-gray-100 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+        <span id="sidebarKeyLabel">API Key Settings</span>
       </button>
     </div>
   </aside>
@@ -148,17 +97,15 @@
   <main class="flex-1 flex flex-col relative bg-white">
     <header class="h-14 border-b flex items-center justify-between px-4 md:px-6 bg-white z-20">
       <div class="flex items-center gap-4">
-        <button onclick="toggleSidebar()" class="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-        </button>
+        <button onclick="toggleSidebar()" class="md:hidden p-2 rounded-lg hover:bg-gray-100"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
         <h1 class="font-bold text-lg">SPECTACHAT</h1>
       </div>
       <div class="flex items-center gap-3">
-        <span id="statusBadge" class="px-2.5 py-1 bg-gray-100 text-gray-600 text-xs rounded-full hidden sm:inline-block">Guest</span>
-        <span id="aiStatusBadge" class="px-2.5 py-1 bg-gray-100 text-gray-500 text-xs rounded-full hidden sm:inline-flex items-center gap-1.5">
-          <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
-          No AI Key
+        <span id="aiBadge" class="px-2.5 py-1 bg-gray-100 text-gray-500 text-xs rounded-full hidden sm:inline-flex items-center gap-1.5">
+          <span id="aiDot" class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+          <span id="aiBadgeText">No AI Key</span>
         </span>
+        <span id="statusBadge" class="px-2.5 py-1 bg-gray-100 text-gray-600 text-xs rounded-full hidden sm:inline-block">Guest</span>
         <div id="headerAuthSection">
           <div id="loggedOutBtns" class="flex gap-2">
             <button onclick="openModal('login')" class="px-4 py-1.5 bg-white border border-gray-200 text-black rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">Sign In</button>
@@ -168,22 +115,10 @@
             <div class="w-8 h-8 rounded-full bg-gray-800 text-white flex items-center justify-center text-xs font-bold" id="userAvatarHeader">U</div>
             <span class="text-sm font-medium hidden sm:block" id="userNameHeader">User</span>
             <div id="userMenuDropdown" class="absolute top-12 right-0 w-48 bg-white rounded-xl shadow-xl border hidden z-50 py-1">
-              <div class="p-3 border-b">
-                <p class="text-sm font-semibold" id="menuUserName">User</p>
-                <p class="text-xs text-gray-500 truncate" id="menuUserEmail">email@example.com</p>
-              </div>
-              <button onclick="openApiKeyModal(); toggleUserMenu();" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
-                API Key Settings
-              </button>
-              <button onclick="logout()" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-                Sign Out
-              </button>
-              <button onclick="deleteHistory()" class="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 rounded-b-xl">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                Delete History
-              </button>
+              <div class="p-3 border-b"><p class="text-sm font-semibold" id="menuUserName">User</p><p class="text-xs text-gray-500 truncate" id="menuUserEmail">email@example.com</p></div>
+              <button onclick="showKeySetup();toggleUserMenu()" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>Change API Key</button>
+              <button onclick="logout()" class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">Sign Out</button>
+              <button onclick="deleteHistory()" class="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-b-xl">Delete History</button>
             </div>
           </div>
         </div>
@@ -193,22 +128,55 @@
     <div id="chatContainer" class="flex-1 overflow-y-auto pb-32">
       <div class="max-w-3xl mx-auto py-8 px-4">
         <div id="messageList" class="space-y-6"></div>
-        <div id="emptyState" class="text-center py-20">
-          <div class="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-            <svg class="w-8 h-8 text-gray-400" viewBox="-245 355 85 85" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-              <path d="M-177.5,410.5c-2.2,0-4-1.8-4-4s1.8-4,4-4c2.2,0,4,1.8,4,4S-175.3,410.5-177.5,410.5z M-194.5,414.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7c3.9,0,7,3.1,7,7C-187.5,411.4-190.6,414.5-194.5,414.5z M-214.5,414.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7s7,3.1,7,7C-207.5,411.4-210.6,414.5-214.5,414.5z M-194.5,394.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7c3.9,0,7,3.1,7,7C-187.5,391.4-190.6,394.5-194.5,394.5z M-214.5,394.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7s7,3.1,7,7C-207.5,391.4-210.6,394.5-214.5,394.5z" style="fill-rule:evenodd;clip-rule:evenodd"/>
-            </svg>
+
+        <!-- EMPTY STATE: NO KEY -->
+        <div id="emptyNoKey" class="hidden fade-in">
+          <div class="setup-card rounded-2xl p-6 md:p-8 max-w-lg mx-auto text-center transition-colors">
+            <div class="w-14 h-14 rounded-2xl bg-blue-100 flex items-center justify-center mx-auto mb-4">
+              <svg class="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+            </div>
+            <h2 class="text-lg font-bold text-gray-900 mb-1">Connect Google Gemini AI</h2>
+            <p class="text-sm text-gray-600 mb-5 leading-relaxed">Paste your free Gemini API key to start chatting. It takes 30 seconds to get one.</p>
+            <div class="bg-white rounded-xl p-4 border border-blue-100 text-left mb-5">
+              <p class="text-xs font-semibold text-gray-700 mb-2">Quick steps:</p>
+              <ol class="text-xs text-gray-600 space-y-1 list-decimal list-inside">
+                <li>Open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="text-blue-600 underline hover:text-blue-800 font-medium">aistudio.google.com/apikey</a></li>
+                <li>Sign in with Google, click <strong>"Create API Key"</strong></li>
+                <li>Copy the key (starts with <code class="bg-gray-100 px-1 rounded font-mono text-[11px]">AIza</code>)</li>
+                <li>Paste it in the box below</li>
+              </ol>
+            </div>
+            <div class="space-y-3">
+              <div class="relative">
+                <input type="text" id="inlineKeyInput" placeholder="Paste your API key here..." class="key-input w-full p-3 pr-12 border border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-mono bg-white" autocomplete="off" spellcheck="false">
+                <button type="button" onclick="toggleInlineKeyVis()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <svg id="inlineEyeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                </button>
+              </div>
+              <p id="inlineKeyError" class="text-red-500 text-xs text-left hidden"></p>
+              <button onclick="connectInlineKey()" id="inlineConnectBtn" class="w-full bg-blue-600 text-white p-3 rounded-xl font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 text-sm">
+                <span id="inlineBtnText">Connect AI</span>
+                <svg id="inlineSpinner" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- EMPTY STATE: READY TO CHAT -->
+        <div id="emptyReady" class="hidden text-center py-16 fade-in">
+          <div class="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+            <svg class="w-7 h-7 text-gray-400" viewBox="-245 355 85 85" fill="currentColor"><path d="M-177.5,410.5c-2.2,0-4-1.8-4-4s1.8-4,4-4c2.2,0,4,1.8,4,4S-175.3,410.5-177.5,410.5z M-194.5,414.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7c3.9,0,7,3.1,7,7C-187.5,411.4-190.6,414.5-194.5,414.5z M-214.5,414.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7s7,3.1,7,7C-207.5,411.4-210.6,414.5-214.5,414.5z M-194.5,394.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7c3.9,0,7,3.1,7,7C-187.5,391.4-190.6,394.5-194.5,394.5z M-214.5,394.5c-3.9,0-7-3.1-7-7c0-3.9,3.1-7,7-7s7,3.1,7,7C-207.5,391.4-210.6,394.5-214.5,394.5z" style="fill-rule:evenodd;clip-rule:evenodd"/></svg>
           </div>
           <p class="text-lg font-semibold text-gray-700">How can I help you today?</p>
-          <p class="text-sm mt-1 text-gray-400" id="emptyStateSub">Enter your Gemini API key to start chatting</p>
+          <p class="text-sm mt-1 text-gray-400">Start a conversation below</p>
         </div>
       </div>
     </div>
 
     <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent pt-6 pb-4 px-4">
       <div class="max-w-3xl mx-auto">
-        <div class="flex items-end gap-2 bg-gray-50 border border-gray-300 rounded-xl p-2 focus-within:border-black focus-within:bg-white transition-all">
-          <textarea id="userInput" rows="1" placeholder="Message SPECTACHAT..." class="flex-1 bg-transparent border-none outline-none resize-none text-sm py-2 max-h-32" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
+        <div id="inputBar" class="flex items-end gap-2 bg-gray-50 border border-gray-300 rounded-xl p-2 focus-within:border-black focus-within:bg-white transition-all">
+          <textarea id="userInput" rows="1" placeholder="Message SPECTACHAT..." class="flex-1 bg-transparent border-none outline-none resize-none text-sm py-2 max-h-32" onkeydown="handleKeyDown(event)" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,128)+'px'"></textarea>
           <button onclick="sendMessage()" id="sendBtn" class="p-2.5 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors flex-shrink-0">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
           </button>
@@ -220,242 +188,258 @@
 </div>
 
 <script>
-// ================= CONFIG =================
+// ===================== CONFIG =====================
 const SUPABASE_URL = "https://jzzwdzcppxbltuueaagn.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp6endkemNwcHhibHR1dWVhYWduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5Mjg0MTQsImV4cCI6MjA4OTUwNDQxNH0.sCdMZlK4O8KAtxkbQj6zdFakko_1ExFsJuDX7-u3qkM";
 
-// Gemini API key — loaded from localStorage, NOT hardcoded
-let GEMINI_API_KEY = localStorage.getItem('spectachat_gemini_key') || '';
+let GEMINI_API_KEY = '';
 let workingModelName = null;
+let aiReady = false;
 let isSending = false;
-
-// Supabase init
-let supabaseClient = null;
-try {
-  if (typeof window.supabase !== 'undefined') {
-    supabaseClient = window.supabase.createClient(SUPABASE_URL.replace(/\/+$/, ''), SUPABASE_KEY);
-  } else {
-    console.warn("Supabase JS library did not load.");
-  }
-} catch (err) {
-  console.error("Failed to init Supabase:", err);
-}
-
 let currentUser = null;
 let currentChatId = null;
 window.chatMemory = [];
 
-// ================= TOAST =================
-function showToast(message, type = 'info') {
-  const container = document.getElementById('toastContainer');
-  const toast = document.createElement('div');
-  const icons = {
-    success: '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>',
-    error: '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>',
-    info: '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
-    warning: '<svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>'
-  };
-  const colors = {
-    success: 'bg-green-50 text-green-800 border-green-200',
-    error: 'bg-red-50 text-red-800 border-red-200',
-    info: 'bg-blue-50 text-blue-800 border-blue-200',
-    warning: 'bg-amber-50 text-amber-800 border-amber-200'
-  };
-  toast.className = `pointer-events-auto px-4 py-3 rounded-xl border text-sm shadow-lg toast-enter flex items-center gap-2 ${colors[type]}`;
-  toast.innerHTML = (icons[type] || '') + '<span>' + message + '</span>';
-  container.appendChild(toast);
-  setTimeout(() => { toast.classList.add('toast-exit'); setTimeout(() => toast.remove(), 300); }, 4000);
-}
-
-// ================= TEXTAREA AUTO RESIZE =================
-function autoResize(el) {
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 128) + 'px';
-}
-
-// ================= INIT =================
-document.addEventListener('DOMContentLoaded', async () => {
-  // Check for existing API key
-  if (GEMINI_API_KEY) {
-    updateAIStatusBadge('connecting');
-    await findWorkingModel();
-  } else {
-    updateAIStatusBadge('none');
-    // Show API key modal on first visit
-    openApiKeyModal();
+// ===================== SUPABASE =====================
+let supabaseClient = null;
+try {
+  if (typeof window.supabase !== 'undefined') {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL.replace(/\/+$/, ''), SUPABASE_KEY);
   }
+} catch (e) { console.error("Supabase init failed:", e); }
+
+// ===================== TOAST =====================
+function showToast(msg, type = 'info') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  const colors = { success:'bg-green-50 text-green-800 border-green-200', error:'bg-red-50 text-red-800 border-red-200', info:'bg-blue-50 text-blue-800 border-blue-200', warning:'bg-amber-50 text-amber-800 border-amber-200' };
+  t.className = 'pointer-events-auto px-4 py-3 rounded-xl border text-sm shadow-lg toast-enter ' + (colors[type]||colors.info);
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => { t.classList.add('toast-exit'); setTimeout(() => t.remove(), 300); }, 4000);
+}
+
+// ===================== INIT =====================
+document.addEventListener('DOMContentLoaded', async () => {
+  // Check for saved key
+  const savedKey = localStorage.getItem('spectachat_gemini_key');
+  if (savedKey) {
+    GEMINI_API_KEY = savedKey;
+    setAIState('connecting');
+    const ok = await findWorkingModel();
+    if (ok) {
+      setAIState('connected');
+    } else {
+      // Saved key is bad — clear it and show setup
+      GEMINI_API_KEY = '';
+      workingModelName = null;
+      localStorage.removeItem('spectachat_gemini_key');
+      setAIState('none');
+    }
+  } else {
+    setAIState('none');
+  }
+
+  // Show correct empty state
+  refreshEmptyState();
 
   // Supabase auth
   if (supabaseClient) {
     try {
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (session) loadUser(session.user);
-
-      supabaseClient.auth.onAuthStateChange((event, session) => {
-        if (event === 'SIGNED_IN' && session) loadUser(session.user);
-        if (event === 'SIGNED_OUT') resetUserUI();
+      supabaseClient.auth.onAuthStateChange((ev, sess) => {
+        if (ev === 'SIGNED_IN' && sess) loadUser(sess.user);
+        if (ev === 'SIGNED_OUT') resetUserUI();
       });
-    } catch(e) {
-      console.error("Session check error:", e);
-    }
+    } catch(e) { console.error("Session error:", e); }
   }
 
-  // Enter key on API key input
-  document.getElementById('apiKeyInput').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); saveAndTestKey(); }
+  // Enter key on inline input
+  document.getElementById('inlineKeyInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); connectInlineKey(); }
   });
 });
 
-// ================= AI STATUS BADGE =================
-function updateAIStatusBadge(status) {
-  const badge = document.getElementById('aiStatusBadge');
-  const sub = document.getElementById('emptyStateSub');
-  if (status === 'connected') {
+// ===================== AI STATE MANAGEMENT =====================
+function setAIState(state) {
+  const dot = document.getElementById('aiDot');
+  const txt = document.getElementById('aiBadgeText');
+  const badge = document.getElementById('aiBadge');
+  const inputBar = document.getElementById('inputBar');
+  const sidebarLabel = document.getElementById('sidebarKeyLabel');
+
+  if (state === 'connected') {
+    aiReady = true;
+    dot.className = 'w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse';
+    txt.textContent = 'AI Connected';
     badge.className = 'px-2.5 py-1 bg-green-50 text-green-700 text-xs rounded-full hidden sm:inline-flex items-center gap-1.5';
-    badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>AI Connected';
-    if (sub) sub.textContent = 'Start a conversation below';
-  } else if (status === 'connecting') {
+    inputBar.classList.remove('send-disabled');
+    sidebarLabel.textContent = 'API Key: Set';
+  } else if (state === 'connecting') {
+    aiReady = false;
+    dot.className = 'w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse';
+    txt.textContent = 'Connecting...';
     badge.className = 'px-2.5 py-1 bg-amber-50 text-amber-700 text-xs rounded-full hidden sm:inline-flex items-center gap-1.5';
-    badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>Connecting...';
-  } else if (status === 'error') {
+    inputBar.classList.add('send-disabled');
+    sidebarLabel.textContent = 'API Key Settings';
+  } else if (state === 'error') {
+    aiReady = false;
+    dot.className = 'w-1.5 h-1.5 rounded-full bg-red-500';
+    txt.textContent = 'AI Error';
     badge.className = 'px-2.5 py-1 bg-red-50 text-red-700 text-xs rounded-full hidden sm:inline-flex items-center gap-1.5';
-    badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>AI Error';
-    if (sub) sub.textContent = 'Fix your API key in settings to start chatting';
+    inputBar.classList.add('send-disabled');
+    sidebarLabel.textContent = 'Fix API Key';
   } else {
+    // none
+    aiReady = false;
+    dot.className = 'w-1.5 h-1.5 rounded-full bg-gray-400';
+    txt.textContent = 'No AI Key';
     badge.className = 'px-2.5 py-1 bg-gray-100 text-gray-500 text-xs rounded-full hidden sm:inline-flex items-center gap-1.5';
-    badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>No AI Key';
-    if (sub) sub.textContent = 'Enter your Gemini API key to start chatting';
+    inputBar.classList.add('send-disabled');
+    sidebarLabel.textContent = 'Set API Key';
   }
 }
 
-// ================= API KEY MODAL =================
-function openApiKeyModal() {
-  const input = document.getElementById('apiKeyInput');
-  if (GEMINI_API_KEY) {
-    // Show masked version of existing key
-    input.value = GEMINI_API_KEY;
-    input.type = 'password';
+function refreshEmptyState() {
+  const noKey = document.getElementById('emptyNoKey');
+  const ready = document.getElementById('emptyReady');
+  const msgList = document.getElementById('messageList');
+
+  if (msgList.children.length > 0) {
+    noKey.classList.add('hidden');
+    ready.classList.add('hidden');
+    return;
+  }
+
+  if (aiReady) {
+    noKey.classList.add('hidden');
+    ready.classList.remove('hidden');
   } else {
-    input.value = '';
+    noKey.classList.remove('hidden');
+    ready.classList.add('hidden');
   }
-  document.getElementById('keyError').classList.add('hidden');
-  document.getElementById('saveKeyBtnText').textContent = GEMINI_API_KEY ? 'Update & Test Key' : 'Connect & Start Chatting';
-  document.getElementById('apiKeyModal').classList.remove('hidden');
-  document.getElementById('apiKeyModal').classList.add('flex');
-  setTimeout(() => input.focus(), 100);
 }
 
-function closeApiKeyModal() {
-  document.getElementById('apiKeyModal').classList.add('hidden');
-  document.getElementById('apiKeyModal').classList.remove('flex');
+// ===================== INLINE KEY SETUP (IN CHAT AREA) =====================
+function toggleInlineKeyVis() {
+  const inp = document.getElementById('inlineKeyInput');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
 }
 
-function toggleKeyVisibility() {
-  const input = document.getElementById('apiKeyInput');
-  input.type = input.type === 'password' ? 'text' : 'password';
-}
+async function connectInlineKey() {
+  const inp = document.getElementById('inlineKeyInput');
+  const errEl = document.getElementById('inlineKeyError');
+  const btnText = document.getElementById('inlineBtnText');
+  const spinner = document.getElementById('inlineSpinner');
+  const btn = document.getElementById('inlineConnectBtn');
+  const key = inp.value.trim();
 
-async function saveAndTestKey() {
-  const input = document.getElementById('apiKeyInput');
-  const key = input.value.trim();
-  const errorEl = document.getElementById('keyError');
-  const btnText = document.getElementById('saveKeyBtnText');
-  const spinner = document.getElementById('saveKeySpinner');
+  // Validate
+  errEl.classList.add('hidden');
+  if (!key) { errEl.textContent = 'Please paste your API key.'; errEl.classList.remove('hidden'); inp.focus(); return; }
+  if (!key.startsWith('AIza')) { errEl.textContent = 'This doesn\'t look like a Gemini key. Keys start with "AIza". Make sure you copied from aistudio.google.com/apikey'; errEl.classList.remove('hidden'); inp.focus(); return; }
+  if (key.length < 30) { errEl.textContent = 'Key is too short — you may not have copied the full key.'; errEl.classList.remove('hidden'); inp.focus(); return; }
 
-  // Validate format
-  if (!key) {
-    errorEl.textContent = 'Please enter an API key.';
-    errorEl.classList.remove('hidden');
-    return;
-  }
-  if (!key.startsWith('AIza')) {
-    errorEl.textContent = 'Invalid format — Gemini keys start with "AIza". Check you\'re pasting the correct key.';
-    errorEl.classList.remove('hidden');
-    return;
-  }
-  if (key.length < 30) {
-    errorEl.textContent = 'Key seems too short. Make sure you copied the full key.';
-    errorEl.classList.remove('hidden');
-    return;
-  }
-
-  errorEl.classList.add('hidden');
-  btnText.textContent = 'Testing...';
+  btnText.textContent = 'Testing key...';
   spinner.classList.remove('hidden');
-  document.getElementById('saveKeyBtn').disabled = true;
+  btn.disabled = true;
 
-  // Test the key
   GEMINI_API_KEY = key;
-  const success = await findWorkingModel();
+  const ok = await findWorkingModel();
 
-  if (success) {
+  if (ok) {
     localStorage.setItem('spectachat_gemini_key', key);
-    closeApiKeyModal();
-    showToast('AI connected successfully!', 'success');
+    setAIState('connected');
+    refreshEmptyState();
+    showToast('Gemini AI connected!', 'success');
+    document.getElementById('userInput').focus();
   } else {
-    errorEl.textContent = 'Key was rejected by Google. Make sure it\'s a valid, active Gemini API key from aistudio.google.com.';
-    errorEl.classList.remove('hidden');
-    GEMINI_API_KEY = localStorage.getItem('spectachat_gemini_key') || '';
+    GEMINI_API_KEY = '';
+    workingModelName = null;
+    setAIState('error');
+    refreshEmptyState();
+    errEl.textContent = 'Google rejected this key. It may be expired, revoked, or from the wrong project. Get a fresh one at aistudio.google.com/apikey';
+    errEl.classList.remove('hidden');
   }
 
-  btnText.textContent = GEMINI_API_KEY ? 'Update & Test Key' : 'Connect & Start Chatting';
+  btnText.textContent = 'Connect AI';
   spinner.classList.add('hidden');
-  document.getElementById('saveKeyBtn').disabled = false;
+  btn.disabled = false;
 }
 
-function skipKeySetup() {
-  closeApiKeyModal();
-  showToast('You can set up your API key later from the sidebar settings.', 'info');
+// ===================== SIDEBAR KEY SETUP (FOR CHANGING KEY) =====================
+function showKeySetup() {
+  // Navigate to empty state with key form
+  newChat();
+  // Focus the inline input
+  setTimeout(() => {
+    const inp = document.getElementById('inlineKeyInput');
+    if (GEMINI_API_KEY) {
+      inp.value = GEMINI_API_KEY;
+      inp.type = 'password';
+      document.getElementById('inlineBtnText').textContent = 'Update Key';
+    } else {
+      inp.value = '';
+      inp.type = 'text';
+      document.getElementById('inlineBtnText').textContent = 'Connect AI';
+    }
+    document.getElementById('inlineKeyError').classList.add('hidden');
+    inp.focus();
+    inp.select();
+  }, 100);
 }
 
-// ================= AUTO-DETECT MODEL =================
+// ===================== FIND WORKING MODEL =====================
 async function findWorkingModel() {
   if (!GEMINI_API_KEY) return false;
   try {
     const res = await fetch('https://generativelanguage.googleapis.com/v1/models?key=' + GEMINI_API_KEY);
+    if (!res.ok) {
+      console.error('Models API returned', res.status);
+      return false;
+    }
     const data = await res.json();
 
-    if (data.models) {
-      const candidates = data.models.filter(m =>
-        m.supportedGenerationMethods &&
-        m.supportedGenerationMethods.includes("generateContent")
-      );
-
-      let found = candidates.find(m => m.name.includes("gemini-2.0-flash"));
-      if (!found) found = candidates.find(m => m.name.includes("gemini-1.5-flash"));
-      if (!found) found = candidates.find(m => m.name.includes("gemini-pro"));
-      if (!found && candidates.length > 0) found = candidates[0];
-
-      if (found) {
-        workingModelName = found.name;
-        console.log("Working model:", workingModelName);
-        updateAIStatusBadge('connected');
-        return true;
-      }
-    }
-
     if (data.error) {
-      console.error("Model list error:", data.error.message);
-      updateAIStatusBadge('error');
+      console.error('Models error:', data.error.message);
       return false;
     }
 
-    updateAIStatusBadge('error');
+    if (!data.models || !Array.isArray(data.models)) return false;
+
+    const candidates = data.models.filter(m =>
+      m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent')
+    );
+
+    // Pick best available model
+    let found = candidates.find(m => m.name.includes('gemini-2.0-flash'));
+    if (!found) found = candidates.find(m => m.name.includes('gemini-1.5-flash'));
+    if (!found) found = candidates.find(m => m.name.includes('gemini-pro'));
+    if (!found && candidates.length > 0) found = candidates[0];
+
+    if (found) {
+      workingModelName = found.name;
+      console.log('Using model:', workingModelName);
+      return true;
+    }
     return false;
   } catch (e) {
-    console.error("Network error fetching models:", e);
-    updateAIStatusBadge('error');
+    console.error('Network error fetching models:', e);
     return false;
   }
 }
 
-// ================= GEMINI AI =================
+// ===================== GEMINI AI CALL =====================
 async function generateAIResponse(prompt) {
-  if (!workingModelName || !GEMINI_API_KEY) {
-    return "Please set up your Gemini API key first. Click the gear icon in the sidebar or the \"No AI Key\" badge above to add your key.\n\nGet a free key at: https://aistudio.google.com/apikey";
+  // This should never be called when aiReady is false, but just in case:
+  if (!aiReady || !workingModelName || !GEMINI_API_KEY) {
+    setAIState('none');
+    refreshEmptyState();
+    return null; // Signal to caller
   }
 
-  window.chatMemory.push({ role: "user", parts: [{ text: prompt }] });
+  window.chatMemory.push({ role: 'user', parts: [{ text: prompt }] });
   addThinkingBubble();
 
   try {
@@ -465,10 +449,7 @@ async function generateAIResponse(prompt) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: window.chatMemory,
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 2048
-        }
+        generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
       })
     });
 
@@ -476,44 +457,40 @@ async function generateAIResponse(prompt) {
     removeThinkingBubble();
 
     if (data.error) {
-      const errMsg = data.error.message || 'Unknown error';
-      // If it's an auth error, mark the key as broken
-      if (errMsg.includes('API_KEY_INVALID') || errMsg.includes('invalid authentication')) {
-        updateAIStatusBadge('error');
-        localStorage.removeItem('spectachat_gemini_key');
+      const msg = data.error.message || 'Unknown error';
+      // Auth errors — kill the key
+      if (msg.includes('API_KEY_INVALID') || msg.includes('invalid authentication') || msg.includes('PERMISSION_DENIED')) {
         GEMINI_API_KEY = '';
         workingModelName = null;
-        return "Your API key is invalid or has been revoked. Please go to Settings and enter a new key.\n\nGet one free at: https://aistudio.google.com/apikey";
+        localStorage.removeItem('spectachat_gemini_key');
+        setAIState('error');
+        refreshEmptyState();
+        return 'Your API key was rejected by Google. It may have been revoked. Click "Fix API Key" in the sidebar to enter a new one.\n\nGet a free key at: https://aistudio.google.com/apikey';
       }
-      return "API Error: " + errMsg;
+      return 'API Error: ' + msg;
     }
 
-    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-      return "The AI returned an empty response. Please try again.";
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts) {
+      return 'The AI returned an empty or blocked response. Try rephrasing your message.';
     }
 
     const reply = data.candidates[0].content.parts[0].text;
-    window.chatMemory.push({ role: "model", parts: [{ text: reply }] });
+    window.chatMemory.push({ role: 'model', parts: [{ text: reply }] });
     return reply;
 
   } catch (e) {
     removeThinkingBubble();
-    console.error("Network error:", e);
-    return "Network error — could not reach the AI service. Check your internet connection.";
+    console.error('Network error:', e);
+    return 'Network error — could not reach the AI service. Check your internet connection and try again.';
   }
 }
 
 function addThinkingBubble() {
-  const div = document.createElement('div');
-  div.className = 'flex gap-3 msg-enter thinking-bubble';
-  div.innerHTML = `
-    <div class="bg-gray-100 rounded-xl px-4 py-3 flex items-center gap-1.5">
-      <span class="w-2 h-2 bg-gray-400 rounded-full dot-1"></span>
-      <span class="w-2 h-2 bg-gray-400 rounded-full dot-2"></span>
-      <span class="w-2 h-2 bg-gray-400 rounded-full dot-3"></span>
-    </div>`;
-  document.getElementById('messageList').appendChild(div);
-  div.scrollIntoView({ behavior: 'smooth' });
+  const d = document.createElement('div');
+  d.className = 'flex gap-3 msg-enter thinking-bubble';
+  d.innerHTML = '<div class="bg-gray-100 rounded-2xl rounded-bl-md px-4 py-3 flex items-center gap-1.5"><span class="w-2 h-2 bg-gray-400 rounded-full dot-1"></span><span class="w-2 h-2 bg-gray-400 rounded-full dot-2"></span><span class="w-2 h-2 bg-gray-400 rounded-full dot-3"></span></div>';
+  document.getElementById('messageList').appendChild(d);
+  d.scrollIntoView({ behavior: 'smooth' });
 }
 
 function removeThinkingBubble() {
@@ -521,52 +498,89 @@ function removeThinkingBubble() {
   if (el) el.remove();
 }
 
-// ================= UI =================
+// ===================== MESSAGE UI =====================
 function addMessageToUI(role, text) {
-  const div = document.createElement('div');
-  div.className = 'flex gap-3 msg-enter ' + (role === 'user' ? 'justify-end' : '');
-
-  const bubble = document.createElement('div');
-  bubble.className = 'max-w-[85%] md:max-w-md text-sm whitespace-pre-wrap leading-relaxed rounded-2xl px-4 py-3 ';
+  const d = document.createElement('div');
+  d.className = 'flex gap-3 msg-enter ' + (role === 'user' ? 'justify-end' : '');
+  const b = document.createElement('div');
+  b.className = 'max-w-[85%] md:max-w-md text-sm whitespace-pre-wrap leading-relaxed rounded-2xl px-4 py-3 ';
   if (role === 'user') {
-    bubble.className += 'bg-black text-white rounded-br-md';
+    b.className += 'bg-black text-white rounded-br-md';
   } else {
-    bubble.className += 'bg-gray-100 text-gray-800 rounded-bl-md';
+    b.className += 'bg-gray-100 text-gray-800 rounded-bl-md';
   }
-
-  // Basic markdown: bold and inline code
-  let formatted = text
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`([^`]+)`/g, '<code class="bg-gray-200 text-gray-800 px-1 rounded text-xs font-mono">$1</code>')
-    .replace(/```([\s\S]*?)```/g, '<pre class="bg-gray-800 text-green-400 p-3 rounded-lg mt-2 mb-2 text-xs overflow-x-auto font-mono">$1</pre>')
-    .replace(/\n/g, '<br>');
-  bubble.innerHTML = formatted;
-
-  div.appendChild(bubble);
-  document.getElementById('messageList').appendChild(div);
-  div.scrollIntoView({ behavior: 'smooth' });
+  // Light formatting
+  let f = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  f = f.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  f = f.replace(/`([^`]+)`/g, '<code class="bg-gray-200 text-gray-800 px-1 rounded text-xs font-mono">$1</code>');
+  f = f.replace(/```([\s\S]*?)```/g, '<pre class="bg-gray-800 text-green-400 p-3 rounded-lg mt-2 mb-2 text-xs overflow-x-auto font-mono">$1</pre>');
+  f = f.replace(/\n/g, '<br>');
+  b.innerHTML = f;
+  d.appendChild(b);
+  document.getElementById('messageList').appendChild(d);
+  d.scrollIntoView({ behavior: 'smooth' });
 }
 
+// ===================== CHAT ACTIONS =====================
 function handleKeyDown(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 }
 
-function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('closed');
-}
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('closed'); }
 
 function newChat() {
   currentChatId = null;
   window.chatMemory = [];
   document.getElementById('messageList').innerHTML = '';
-  document.getElementById('emptyState').classList.remove('hidden');
+  refreshEmptyState();
 }
 
-// ================= AUTH MODAL =================
+async function sendMessage() {
+  if (isSending) return;
+
+  // Hard block: cannot send without AI
+  if (!aiReady) {
+    showKeySetup();
+    return;
+  }
+
+  const inp = document.getElementById('userInput');
+  const text = inp.value.trim();
+  if (!text) return;
+
+  isSending = true;
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('emptyNoKey').classList.add('hidden');
+  document.getElementById('emptyReady').classList.add('hidden');
+  addMessageToUI('user', text);
+  inp.value = '';
+  inp.style.height = 'auto';
+
+  const reply = await generateAIResponse(text);
+
+  if (reply === null) {
+    // AI became unavailable mid-conversation
+    isSending = false;
+    document.getElementById('sendBtn').disabled = false;
+    return;
+  }
+
+  addMessageToUI('ai', reply);
+
+  // Save to DB
+  if (currentUser && supabaseClient) {
+    try {
+      await supabaseClient.from('chats').insert([{ user_id: currentUser.id, user_msg: text, ai_msg: reply, created_at: new Date().toISOString() }]);
+      loadUserHistory();
+    } catch (e) { console.error('DB error:', e); }
+  }
+
+  isSending = false;
+  document.getElementById('sendBtn').disabled = false;
+  inp.focus();
+}
+
+// ===================== AUTH MODAL =====================
 function showTab(tab) {
   document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
   document.getElementById('signupForm').classList.toggle('hidden', tab !== 'signup');
@@ -577,80 +591,28 @@ function showTab(tab) {
   document.getElementById('loginError').classList.add('hidden');
   document.getElementById('signError').classList.add('hidden');
 }
+function openModal(tab) { showTab(tab); document.getElementById('loginModal').classList.remove('hidden'); document.getElementById('loginModal').classList.add('flex'); }
+function closeModal() { document.getElementById('loginModal').classList.add('hidden'); document.getElementById('loginModal').classList.remove('flex'); }
 
-function openModal(tab) {
-  showTab(tab);
-  document.getElementById('loginModal').classList.remove('hidden');
-  document.getElementById('loginModal').classList.add('flex');
-}
-
-function closeModal() {
-  document.getElementById('loginModal').classList.add('hidden');
-  document.getElementById('loginModal').classList.remove('flex');
-}
-
-// ================= SUPABASE AUTH =================
+// ===================== SUPABASE AUTH =====================
 async function handleSignup(e) {
   e.preventDefault();
-  if (!supabaseClient) {
-    document.getElementById('signError').textContent = "Auth service unavailable. Check your connection.";
-    document.getElementById('signError').classList.remove('hidden');
-    return;
-  }
-  const name = document.getElementById('signName').value.trim();
-  const email = document.getElementById('signEmail').value.trim();
-  const pass = document.getElementById('signPass').value;
-
-  const { data, error } = await supabaseClient.auth.signUp({
-    email, password: pass,
-    options: { data: { name } }
-  });
-
-  if (error) {
-    document.getElementById('signError').textContent = error.message;
-    document.getElementById('signError').classList.remove('hidden');
-    return;
-  }
-
-  if (data.user && !data.session) {
-    showToast("Account created! Check your email to verify.", 'success');
-    closeModal();
-  } else if (data.session) {
-    loadUser(data.user);
-    closeModal();
-  }
+  if (!supabaseClient) { document.getElementById('signError').textContent = 'Auth service unavailable.'; document.getElementById('signError').classList.remove('hidden'); return; }
+  const { data, error } = await supabaseClient.auth.signUp({ email: document.getElementById('signEmail').value.trim(), password: document.getElementById('signPass').value, options: { data: { name: document.getElementById('signName').value.trim() } } });
+  if (error) { document.getElementById('signError').textContent = error.message; document.getElementById('signError').classList.remove('hidden'); return; }
+  if (data.user && !data.session) { showToast('Account created! Check your email to verify.', 'success'); closeModal(); }
+  else if (data.session) { loadUser(data.user); closeModal(); }
 }
 
 async function handleLogin(e) {
   e.preventDefault();
-  if (!supabaseClient) {
-    document.getElementById('loginError').textContent = "Auth service unavailable.";
-    document.getElementById('loginError').classList.remove('hidden');
-    return;
-  }
-  const email = document.getElementById('loginEmail').value.trim();
-  const pass = document.getElementById('loginPass').value;
-
-  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: pass });
-
-  if (error) {
-    document.getElementById('loginError').textContent = error.message;
-    document.getElementById('loginError').classList.remove('hidden');
-    return;
-  }
-
-  if (data.user) {
-    loadUser(data.user);
-    closeModal();
-  }
+  if (!supabaseClient) { document.getElementById('loginError').textContent = 'Auth service unavailable.'; document.getElementById('loginError').classList.remove('hidden'); return; }
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email: document.getElementById('loginEmail').value.trim(), password: document.getElementById('loginPass').value });
+  if (error) { document.getElementById('loginError').textContent = error.message; document.getElementById('loginError').classList.remove('hidden'); return; }
+  if (data.user) { loadUser(data.user); closeModal(); }
 }
 
-async function logout() {
-  if (supabaseClient) await supabaseClient.auth.signOut();
-  resetUserUI();
-  newChat();
-  toggleUserMenu();
-}
+async function logout() { if (supabaseClient) await supabaseClient.auth.signOut(); resetUserUI(); newChat(); toggleUserMenu(); }
 
 function resetUserUI() {
   currentUser = null;
@@ -666,9 +628,8 @@ function resetUserUI() {
 async function loadUser(user) {
   currentUser = user;
   document.getElementById('loggedOutBtns').classList.add('hidden');
-  const dropdown = document.getElementById('headerUserDropdown');
-  dropdown.classList.remove('hidden');
-  dropdown.classList.add('flex');
+  document.getElementById('headerUserDropdown').classList.remove('hidden');
+  document.getElementById('headerUserDropdown').classList.add('flex');
   const name = user.user_metadata?.name || 'User';
   document.getElementById('userAvatarHeader').textContent = name[0].toUpperCase();
   document.getElementById('userNameHeader').textContent = name;
@@ -680,87 +641,23 @@ async function loadUser(user) {
   loadUserHistory();
 }
 
-// ================= CHAT =================
-async function sendMessage() {
-  if (isSending) return;
-  const input = document.getElementById('userInput');
-  const text = input.value.trim();
-  if (!text) return;
-
-  isSending = true;
-  document.getElementById('sendBtn').disabled = true;
-  document.getElementById('emptyState').classList.add('hidden');
-  addMessageToUI('user', text);
-  input.value = '';
-  input.style.height = 'auto';
-
-  const aiReply = await generateAIResponse(text);
-  addMessageToUI('ai', aiReply);
-
-  // Save to Supabase if logged in
-  if (currentUser && supabaseClient) {
-    try {
-      await supabaseClient.from('chats').insert([{
-        user_id: currentUser.id,
-        user_msg: text,
-        ai_msg: aiReply,
-        created_at: new Date().toISOString()
-      }]);
-      loadUserHistory();
-    } catch (e) {
-      console.error("DB save error:", e);
-    }
-  }
-
-  isSending = false;
-  document.getElementById('sendBtn').disabled = false;
-  input.focus();
-}
-
-// ================= HISTORY =================
+// ===================== HISTORY =====================
 async function loadUserHistory() {
   if (!currentUser || !supabaseClient) return;
-  const { data, error } = await supabaseClient
-    .from('chats')
-    .select('*')
-    .eq('user_id', currentUser.id)
-    .order('created_at', { ascending: false })
-    .limit(20);
-
+  const { data, error } = await supabaseClient.from('chats').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(20);
   const list = document.getElementById('historyList');
   list.innerHTML = '';
-
-  if (error) {
-    list.innerHTML = '<p class="text-xs text-red-400 p-2">Failed to load history</p>';
-    return;
-  }
-  if (!data || data.length === 0) {
-    list.innerHTML = '<p class="text-xs text-gray-400 p-2">No chat history yet</p>';
-    return;
-  }
-
-  // Group by date
+  if (error) { list.innerHTML = '<p class="text-xs text-red-400 p-2">Failed to load</p>'; return; }
+  if (!data || !data.length) { list.innerHTML = '<p class="text-xs text-gray-400 p-2">No history yet</p>'; return; }
   const today = new Date().toDateString();
   const yesterday = new Date(Date.now() - 86400000).toDateString();
-
-  let currentLabel = '';
+  let lastLabel = '';
   data.forEach(d => {
-    const msgDate = new Date(d.created_at).toDateString();
-    let label = '';
-    if (msgDate === today) label = 'Today';
-    else if (msgDate === yesterday) label = 'Yesterday';
-    else label = new Date(d.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-
-    if (label !== currentLabel) {
-      currentLabel = label;
-      const labelEl = document.createElement('p');
-      labelEl.className = 'text-[10px] uppercase tracking-wider text-gray-400 font-medium px-2 pt-3 pb-1';
-      labelEl.textContent = label;
-      list.appendChild(labelEl);
-    }
-
+    const ds = new Date(d.created_at).toDateString();
+    let label = ds === today ? 'Today' : ds === yesterday ? 'Yesterday' : new Date(d.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    if (label !== lastLabel) { lastLabel = label; const l = document.createElement('p'); l.className = 'text-[10px] uppercase tracking-wider text-gray-400 font-medium px-2 pt-3 pb-1'; l.textContent = label; list.appendChild(l); }
     const div = document.createElement('div');
-    div.className = 'p-2 rounded-lg cursor-pointer hover:bg-gray-100 truncate text-gray-700 transition-colors text-sm';
+    div.className = 'p-2 rounded-lg cursor-pointer hover:bg-gray-100 truncate text-gray-700 transition-colors';
     div.textContent = d.user_msg.substring(0, 30) + (d.user_msg.length > 30 ? '...' : '');
     div.onclick = () => loadUserChat(d.id);
     list.appendChild(div);
@@ -769,48 +666,37 @@ async function loadUserHistory() {
 
 async function loadUserChat(id) {
   const { data } = await supabaseClient.from('chats').select('*').eq('id', id);
-  if (!data || data.length === 0) return;
+  if (!data || !data.length) return;
   currentChatId = id;
   document.getElementById('messageList').innerHTML = '';
-  document.getElementById('emptyState').classList.add('hidden');
+  document.getElementById('emptyNoKey').classList.add('hidden');
+  document.getElementById('emptyReady').classList.add('hidden');
   window.chatMemory = [];
   data.forEach(m => {
     addMessageToUI('user', m.user_msg);
-    window.chatMemory.push({ role: "user", parts: [{ text: m.user_msg }] });
+    window.chatMemory.push({ role: 'user', parts: [{ text: m.user_msg }] });
     addMessageToUI('ai', m.ai_msg);
-    window.chatMemory.push({ role: "model", parts: [{ text: m.ai_msg }] });
+    window.chatMemory.push({ role: 'model', parts: [{ text: m.ai_msg }] });
   });
-  // Close sidebar on mobile after selecting
   if (window.innerWidth < 768) toggleSidebar();
 }
 
 async function deleteHistory() {
   if (!currentUser || !supabaseClient) return;
-  if (!confirm("Delete all your chat history? This cannot be undone.")) return;
+  if (!confirm('Delete all chat history? This cannot be undone.')) return;
   const { error } = await supabaseClient.from('chats').delete().eq('user_id', currentUser.id);
-  if (error) return showToast("Error: " + error.message, 'error');
-  newChat();
-  loadUserHistory();
-  showToast('Chat history deleted', 'info');
+  if (error) return showToast('Error: ' + error.message, 'error');
+  newChat(); loadUserHistory(); showToast('History deleted', 'info');
 }
 
-// ================= USER MENU =================
-function toggleUserMenu() {
-  document.getElementById('userMenuDropdown').classList.toggle('hidden');
-}
+// ===================== USER MENU =====================
+function toggleUserMenu() { document.getElementById('userMenuDropdown').classList.toggle('hidden'); }
 document.addEventListener('click', e => {
-  const dropdown = document.getElementById('headerUserDropdown');
-  const menu = document.getElementById('userMenuDropdown');
-  if (dropdown && menu && !dropdown.contains(e.target)) menu.classList.add('hidden');
+  const dd = document.getElementById('headerUserDropdown');
+  const m = document.getElementById('userMenuDropdown');
+  if (dd && m && !dd.contains(e.target)) m.classList.add('hidden');
 });
-
-// Close modals on backdrop click
-document.getElementById('apiKeyModal').addEventListener('click', e => {
-  if (e.target === document.getElementById('apiKeyModal')) closeApiKeyModal();
-});
-document.getElementById('loginModal').addEventListener('click', e => {
-  if (e.target === document.getElementById('loginModal')) closeModal();
-});
+document.getElementById('loginModal').addEventListener('click', e => { if (e.target === document.getElementById('loginModal')) closeModal(); });
 </script>
 </body>
 </html>
